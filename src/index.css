@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.18 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.02 255);
+  --primary: oklch(0.45 0.12 230);
+  --primary-foreground: oklch(0.98 0.01 230);
+  --secondary: oklch(0.95 0.01 240);
+  --secondary-foreground: oklch(0.28 0.03 250);
+  --muted: oklch(0.95 0.008 240);
+  --muted-foreground: oklch(0.5 0.02 250);
+  --accent: oklch(0.93 0.03 200);
+  --accent-foreground: oklch(0.28 0.05 220);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.9 0.01 240);
+  --input: oklch(0.9 0.01 240);
+  --ring: oklch(0.55 0.1 230);
+  --chart-1: oklch(0.55 0.14 230);
+  --chart-2: oklch(0.6 0.12 165);
+  --chart-3: oklch(0.65 0.14 85);
+  --chart-4: oklch(0.58 0.16 310);
+  --chart-5: oklch(0.62 0.18 35);
+}
+
+.dark {
+  --background: oklch(0.16 0.02 255);
+  --foreground: oklch(0.95 0.01 240);
+  --card: oklch(0.2 0.025 255);
+  --card-foreground: oklch(0.95 0.01 240);
+  --popover: oklch(0.2 0.025 255);
+  --popover-foreground: oklch(0.95 0.01 240);
+  --primary: oklch(0.72 0.12 210);
+  --primary-foreground: oklch(0.18 0.03 230);
+  --secondary: oklch(0.26 0.03 250);
+  --secondary-foreground: oklch(0.92 0.01 240);
+  --muted: oklch(0.26 0.025 250);
+  --muted-foreground: oklch(0.7 0.02 240);
+  --accent: oklch(0.28 0.04 220);
+  --accent-foreground: oklch(0.92 0.02 210);
+  --destructive: oklch(0.65 0.18 25);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.65 0.1 210);
+  --chart-1: oklch(0.7 0.14 210);
+  --chart-2: oklch(0.68 0.12 165);
+  --chart-3: oklch(0.75 0.14 85);
+  --chart-4: oklch(0.68 0.16 310);
+  --chart-5: oklch(0.7 0.18 35);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-screen overflow-x-hidden;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 10% -10%, oklch(0.55 0.12 210 / 0.18), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 0%, oklch(0.5 0.1 280 / 0.12), transparent),
+      linear-gradient(180deg, transparent, oklch(0.16 0.02 255 / 0.02));
+  }
+
+  .dark body,
+  body:is(.dark *) {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 10% -10%, oklch(0.45 0.1 210 / 0.25), transparent),
+      radial-gradient(ellipse 60% 40% at 95% 5%, oklch(0.4 0.08 280 / 0.2), transparent),
+      linear-gradient(180deg, oklch(0.14 0.02 255), oklch(0.16 0.02 255));
+  }
+}

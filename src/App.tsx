@@ -1,51 +1,80 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useEffect, useRef, useState } from "react";
+import { animate, createScope, stagger } from "animejs";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { BentoGrid, BentoItem } from "@/components/bento/BentoGrid";
+import { ClockCard } from "@/components/cards/ClockCard";
+import { CalculatorCard } from "@/components/cards/CalculatorCard";
+import { CalendarCard } from "@/components/cards/CalendarCard";
+import { AgendaCard } from "@/components/cards/AgendaCard";
+import { CpuCard, GpuCard, NetworkCard, RamCard } from "@/components/cards/SystemCards";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { I18nProvider } from "@/lib/i18n";
+import { ThemeProvider } from "@/lib/theme";
+import { useSystemStats } from "@/hooks/useSystemStats";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+function Dashboard() {
+  const root = useRef<HTMLDivElement>(null);
+  const scope = useRef<ReturnType<typeof createScope> | null>(null);
+  const { stats, history } = useSystemStats(1000);
+  const [agendaKey, setAgendaKey] = useState(0);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    if (!root.current) return;
+    scope.current = createScope({ root }).add(() => {
+      animate(".bento-item", {
+        opacity: [0, 1],
+        y: [24, 0],
+        delay: stagger(60),
+        duration: 520,
+        ease: "outCubic",
+      });
+    });
+    return () => scope.current?.revert();
+  }, []);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <div ref={root} className="mx-auto min-h-screen max-w-7xl px-4 py-6 md:px-6 lg:px-8">
+      <AppHeader />
+      <BentoGrid>
+        <BentoItem className="xl:col-span-2">
+          <ClockCard />
+        </BentoItem>
+        <BentoItem>
+          <CpuCard stats={stats} history={history} />
+        </BentoItem>
+        <BentoItem>
+          <RamCard stats={stats} history={history} />
+        </BentoItem>
+        <BentoItem className="xl:col-span-2 xl:row-span-2">
+          <CalendarCard onEventsChanged={() => setAgendaKey((k) => k + 1)} />
+        </BentoItem>
+        <BentoItem className="xl:col-span-2 xl:row-span-2">
+          <CalculatorCard />
+        </BentoItem>
+        <BentoItem>
+          <GpuCard stats={stats} history={history} />
+        </BentoItem>
+        <BentoItem>
+          <NetworkCard stats={stats} history={history} />
+        </BentoItem>
+        <BentoItem className="xl:col-span-2">
+          <AgendaCard refreshKey={agendaKey} />
+        </BentoItem>
+      </BentoGrid>
+      <Toaster richColors position="bottom-right" />
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ThemeProvider>
+      <I18nProvider>
+        <TooltipProvider>
+          <Dashboard />
+        </TooltipProvider>
+      </I18nProvider>
+    </ThemeProvider>
+  );
+}

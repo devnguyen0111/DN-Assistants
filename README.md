@@ -1,7 +1,27 @@
-# Tauri + React + Typescript
+# DN Assistant
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Desktop utility app built with **Tauri 2**, **React 19**, **shadcn/ui**, **Lucide**, and **Anime.js**.
 
-## Recommended IDE Setup
+## Features
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+- Live clock with locale-aware date formatting (vi/en)
+- Month calendar with schedule notes (SQLite)
+- Basic calculator with expression parser (no `eval`)
+- System monitor: CPU, RAM, network, NVIDIA GPU (NVML)
+
+## Develop
+
+Prerequisites: Node 18+, pnpm, Rust stable (MSVC on Windows), WebView2.
+
+```bash
+pnpm install
+pnpm tauri dev
+```
+
+## Build
+
+```bash
+pnpm tauri build
+```
+
+Installer output is under `src-tauri/target/release/bundle/`.
