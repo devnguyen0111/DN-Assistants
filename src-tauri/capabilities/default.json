@@ -6,10 +6,44 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "notification:default",
     "sql:default",
     "sql:allow-execute",
     "sql:allow-select",
     "sql:allow-load",
-    "sql:allow-close"
+    "sql:allow-close",
+    "window-state:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "store:default",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "core:window:allow-is-visible",
+    "log:default",
+    "os:default",
+    "process:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    "dialog:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "updater:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.ipify.org/**" },
+        { "url": "https://ipapi.co/**" },
+        { "url": "https://api.frankfurter.app/**" },
+        { "url": "https://api.frankfurter.dev/**" },
+        { "url": "https://api.open-meteo.com/**" },
+        { "url": "https://geocoding-api.open-meteo.com/**" }
+      ]
+    }
   ]
 }

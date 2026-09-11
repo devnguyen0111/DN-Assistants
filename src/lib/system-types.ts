@@ -12,6 +12,11 @@ export type SystemStats = {
     rx_bytes_per_sec: number;
     tx_bytes_per_sec: number;
   };
+  interfaces: Array<{
+    name: string;
+    rx_bytes_per_sec: number;
+    tx_bytes_per_sec: number;
+  }>;
   gpu: {
     available: boolean;
     name: string | null;
@@ -21,4 +26,17 @@ export type SystemStats = {
     temperature: number | null;
     power_watts: number | null;
   };
+  disks: Array<{
+    name: string;
+    mount_point: string;
+    total: number;
+    available: number;
+    used: number;
+  }>;
+  processes: Array<{
+    pid: number;
+    name: string;
+    cpu_usage: number;
+    memory: number;
+  }>;
 };

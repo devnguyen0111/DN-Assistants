@@ -1,80 +1,99 @@
-import { useEffect, useRef, useState } from "react";
-import { animate, createScope, stagger } from "animejs";
-import { AppHeader } from "@/components/layout/AppHeader";
-import { BentoGrid, BentoItem } from "@/components/bento/BentoGrid";
-import { ClockCard } from "@/components/cards/ClockCard";
-import { CalculatorCard } from "@/components/cards/CalculatorCard";
-import { CalendarCard } from "@/components/cards/CalendarCard";
-import { AgendaCard } from "@/components/cards/AgendaCard";
-import { CpuCard, GpuCard, NetworkCard, RamCard } from "@/components/cards/SystemCards";
+import { useCallback, useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AppShell } from "@/components/layout/AppShell";
+import { CommandPalette } from "@/components/layout/CommandPalette";
+import { ShortcutsDialog } from "@/components/layout/ShortcutsDialog";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEventReminders } from "@/hooks/useEventReminders";
+import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { useHashRoute } from "@/hooks/useHashRoute";
 import { I18nProvider } from "@/lib/i18n";
+import { SettingsProvider } from "@/lib/settings-context";
 import { ThemeProvider } from "@/lib/theme";
-import { useSystemStats } from "@/hooks/useSystemStats";
+import { AboutPage } from "@/pages/AboutPage";
+import { CalculatorPage } from "@/pages/CalculatorPage";
+import { CalendarPage } from "@/pages/CalendarPage";
+import { ClipboardPage } from "@/pages/ClipboardPage";
+import { ClockPage } from "@/pages/ClockPage";
+import { CurrencyPage } from "@/pages/CurrencyPage";
+import { DevToolsPage } from "@/pages/DevToolsPage";
+import { FocusPage } from "@/pages/FocusPage";
+import { HomePage } from "@/pages/HomePage";
+import { NetworkPage } from "@/pages/NetworkPage";
+import { NotesPage } from "@/pages/NotesPage";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { SystemPage } from "@/pages/SystemPage";
+import { TodoPage } from "@/pages/TodoPage";
+import { WeatherPage } from "@/pages/WeatherPage";
 
-function Dashboard() {
-  const root = useRef<HTMLDivElement>(null);
-  const scope = useRef<ReturnType<typeof createScope> | null>(null);
-  const { stats, history } = useSystemStats(1000);
-  const [agendaKey, setAgendaKey] = useState(0);
+function AppRoutes() {
+  const { route, setRoute } = useHashRoute();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  useEventReminders();
+
+  const onNavigate = useCallback((r: typeof route) => setRoute(r), [setRoute]);
+  const onTogglePalette = useCallback(() => setPaletteOpen((o) => !o), []);
+  const onOpenShortcuts = useCallback(() => setShortcutsOpen(true), []);
+
+  useGlobalShortcuts({
+    onNavigate,
+    onTogglePalette,
+    onOpenShortcuts,
+  });
 
   useEffect(() => {
-    if (!root.current) return;
-    scope.current = createScope({ root }).add(() => {
-      animate(".bento-item", {
-        opacity: [0, 1],
-        y: [24, 0],
-        delay: stagger(60),
-        duration: 520,
-        ease: "outCubic",
-      });
+    let unlisten: (() => void) | undefined;
+    void listen("open-clipboard", () => {
+      onNavigate("clipboard");
+    }).then((fn) => {
+      unlisten = fn;
     });
-    return () => scope.current?.revert();
-  }, []);
+    return () => unlisten?.();
+  }, [onNavigate]);
 
   return (
-    <div ref={root} className="mx-auto min-h-screen max-w-7xl px-4 py-6 md:px-6 lg:px-8">
-      <AppHeader />
-      <BentoGrid>
-        <BentoItem className="xl:col-span-2">
-          <ClockCard />
-        </BentoItem>
-        <BentoItem>
-          <CpuCard stats={stats} history={history} />
-        </BentoItem>
-        <BentoItem>
-          <RamCard stats={stats} history={history} />
-        </BentoItem>
-        <BentoItem className="xl:col-span-2 xl:row-span-2">
-          <CalendarCard onEventsChanged={() => setAgendaKey((k) => k + 1)} />
-        </BentoItem>
-        <BentoItem className="xl:col-span-2 xl:row-span-2">
-          <CalculatorCard />
-        </BentoItem>
-        <BentoItem>
-          <GpuCard stats={stats} history={history} />
-        </BentoItem>
-        <BentoItem>
-          <NetworkCard stats={stats} history={history} />
-        </BentoItem>
-        <BentoItem className="xl:col-span-2">
-          <AgendaCard refreshKey={agendaKey} />
-        </BentoItem>
-      </BentoGrid>
+    <AppShell route={route} onNavigate={onNavigate}>
+      {route === "home" && <HomePage onNavigate={onNavigate} />}
+      {route === "clock" && <ClockPage />}
+      {route === "calendar" && <CalendarPage />}
+      {route === "calculator" && <CalculatorPage />}
+      {route === "currency" && <CurrencyPage />}
+      {route === "devtools" && <DevToolsPage />}
+      {route === "notes" && <NotesPage />}
+      {route === "todo" && <TodoPage />}
+      {route === "clipboard" && <ClipboardPage />}
+      {route === "focus" && <FocusPage />}
+      {route === "system" && <SystemPage />}
+      {route === "network" && <NetworkPage />}
+      {route === "weather" && <WeatherPage />}
+      {route === "settings" && <SettingsPage />}
+      {route === "about" && <AboutPage />}
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        onNavigate={onNavigate}
+      />
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <Toaster richColors position="bottom-right" />
-    </div>
+    </AppShell>
   );
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <I18nProvider>
-        <TooltipProvider>
-          <Dashboard />
-        </TooltipProvider>
-      </I18nProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <I18nProvider>
+          <SettingsProvider>
+            <TooltipProvider>
+              <AppRoutes />
+            </TooltipProvider>
+          </SettingsProvider>
+        </I18nProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

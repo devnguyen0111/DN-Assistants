@@ -87,6 +87,73 @@
   --chart-5: oklch(0.7 0.18 35);
 }
 
+/* Accent palettes */
+html[data-accent="teal"] {
+  --primary: oklch(0.45 0.12 200);
+  --ring: oklch(0.55 0.1 200);
+}
+html.dark[data-accent="teal"] {
+  --primary: oklch(0.72 0.12 200);
+  --ring: oklch(0.65 0.1 200);
+}
+html[data-accent="blue"] {
+  --primary: oklch(0.45 0.14 255);
+  --ring: oklch(0.55 0.12 255);
+}
+html.dark[data-accent="blue"] {
+  --primary: oklch(0.7 0.14 255);
+  --ring: oklch(0.65 0.12 255);
+}
+html[data-accent="violet"] {
+  --primary: oklch(0.48 0.16 295);
+  --ring: oklch(0.55 0.14 295);
+}
+html.dark[data-accent="violet"] {
+  --primary: oklch(0.72 0.14 295);
+  --ring: oklch(0.65 0.12 295);
+}
+html[data-accent="rose"] {
+  --primary: oklch(0.5 0.16 15);
+  --ring: oklch(0.55 0.14 15);
+}
+html.dark[data-accent="rose"] {
+  --primary: oklch(0.72 0.14 15);
+  --ring: oklch(0.65 0.12 15);
+}
+html[data-accent="amber"] {
+  --primary: oklch(0.55 0.14 75);
+  --ring: oklch(0.6 0.12 75);
+}
+html.dark[data-accent="amber"] {
+  --primary: oklch(0.75 0.14 75);
+  --ring: oklch(0.7 0.12 75);
+}
+html[data-accent="emerald"] {
+  --primary: oklch(0.48 0.12 160);
+  --ring: oklch(0.55 0.1 160);
+}
+html.dark[data-accent="emerald"] {
+  --primary: oklch(0.72 0.12 160);
+  --ring: oklch(0.65 0.1 160);
+}
+
+html[data-density="compact"] {
+  --radius: 0.5rem;
+}
+html[data-density="comfortable"] {
+  --radius: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
