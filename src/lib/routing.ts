@@ -9,6 +9,7 @@ export type AppRoute =
   | "todo"
   | "clipboard"
   | "focus"
+  | "tiktok"
   | "system"
   | "network"
   | "weather"
@@ -26,6 +27,7 @@ export const ROUTES: AppRoute[] = [
   "todo",
   "clipboard",
   "focus",
+  "tiktok",
   "system",
   "network",
   "weather",

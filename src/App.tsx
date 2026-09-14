@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEventReminders } from "@/hooks/useEventReminders";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { useTikTokStreakReminders } from "@/hooks/useTikTokStreakReminders";
 import { useHashRoute } from "@/hooks/useHashRoute";
 import { I18nProvider } from "@/lib/i18n";
 import { SettingsProvider } from "@/lib/settings-context";
@@ -25,6 +26,7 @@ import { NetworkPage } from "@/pages/NetworkPage";
 import { NotesPage } from "@/pages/NotesPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SystemPage } from "@/pages/SystemPage";
+import { TikTokPage } from "@/pages/TikTokPage";
 import { TodoPage } from "@/pages/TodoPage";
 import { WeatherPage } from "@/pages/WeatherPage";
 
@@ -33,6 +35,7 @@ function AppRoutes() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useEventReminders();
+  useTikTokStreakReminders();
 
   const onNavigate = useCallback((r: typeof route) => setRoute(r), [setRoute]);
   const onTogglePalette = useCallback(() => setPaletteOpen((o) => !o), []);
@@ -66,6 +69,7 @@ function AppRoutes() {
       {route === "todo" && <TodoPage />}
       {route === "clipboard" && <ClipboardPage />}
       {route === "focus" && <FocusPage />}
+      {route === "tiktok" && <TikTokPage />}
       {route === "system" && <SystemPage />}
       {route === "network" && <NetworkPage />}
       {route === "weather" && <WeatherPage />}

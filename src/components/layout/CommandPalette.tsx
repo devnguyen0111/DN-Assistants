@@ -16,6 +16,7 @@ import {
   NotebookPen,
   Settings,
   Timer,
+  Flame,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -27,9 +28,9 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { evaluate, formatResult } from "@/lib/calculator";
-import { convertCurrency, parseCurrencyQuery } from "@/lib/currency";
+import { convertCurrency, formatConverted, parseCurrencyQuery } from "@/lib/currency";
 import { listEvents, type CalendarEvent } from "@/lib/events";
-import { useI18n } from "@/lib/i18n";
+import { localeTag, useI18n } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
 import { toast } from "sonner";
 
@@ -53,6 +54,7 @@ const NAV_ITEMS: Array<{
     | "navTodo"
     | "navClipboard"
     | "navFocus"
+    | "navTikTok"
     | "navSystem"
     | "navNetwork"
     | "navWeather"
@@ -69,6 +71,7 @@ const NAV_ITEMS: Array<{
   { route: "todo", icon: CheckSquare, labelKey: "navTodo" },
   { route: "clipboard", icon: ClipboardList, labelKey: "navClipboard" },
   { route: "focus", icon: Timer, labelKey: "navFocus" },
+  { route: "tiktok", icon: Flame, labelKey: "navTikTok" },
   { route: "system", icon: Monitor, labelKey: "navSystem" },
   { route: "network", icon: Network, labelKey: "navNetwork" },
   { route: "weather", icon: CloudSun, labelKey: "navWeather" },
@@ -79,12 +82,13 @@ const NAV_ITEMS: Array<{
 function looksLikeMath(query: string): boolean {
   const q = query.trim();
   if (!q) return false;
-  if (/\bto\b/i.test(q)) return false;
+  if (/\b(to|sang)\b/i.test(q)) return false;
   return /[\d+\-*/%().]/.test(q) && /\d/.test(q);
 }
 
 export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const tag = localeTag(locale);
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [fxResult, setFxResult] = useState<string | null>(null);
@@ -109,7 +113,11 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
     let cancelled = false;
     void convertCurrency(parsed.amount, parsed.from, parsed.to)
       .then((r) => {
-        if (!cancelled) setFxResult(`${parsed.amount} ${parsed.from} = ${r.toFixed(4)} ${parsed.to}`);
+        if (!cancelled) {
+          setFxResult(
+            `${formatConverted(parsed.amount, parsed.from, tag)} ${parsed.from} = ${formatConverted(r, parsed.to, tag)} ${parsed.to}`,
+          );
+        }
       })
       .catch(() => {
         if (!cancelled) setFxResult(null);
@@ -117,7 +125,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [query, tag]);
 
   const calcResult = useMemo(() => {
     if (!looksLikeMath(query)) return null;

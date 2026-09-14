@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, CheckSquare, Clock3, Cpu, MemoryStick, NotebookPen } from "lucide-react";
+import { CalendarClock, CheckSquare, Clock3, Cpu, Flame, MemoryStick, NotebookPen } from "lucide-react";
 import { BentoGrid, BentoItem } from "@/components/bento/BentoGrid";
 import { WeatherCard } from "@/components/cards/WeatherCard";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { useSystemStats } from "@/hooks/useSystemStats";
 import { formatEventRange, listUpcoming, type CalendarEvent } from "@/lib/events";
 import { listNotes, type Note } from "@/lib/notes";
 import { listTodos, type Todo } from "@/lib/todos";
+import { isDoneToday, listTikTokStreaks, type TikTokStreak } from "@/lib/tiktok-streaks";
 import { localeTag, useI18n } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings-context";
 import { pad2, formatPercent, formatBytes } from "@/lib/utils";
@@ -31,6 +32,7 @@ export function HomePage({ onNavigate }: Props) {
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [streaks, setStreaks] = useState<TikTokStreak[]>([]);
   const { stats } = useSystemStats(3000);
 
   useEffect(() => {
@@ -52,6 +54,9 @@ export function HomePage({ onNavigate }: Props) {
     void listNotes()
       .then((rows) => setNotes(rows.slice(0, 4)))
       .catch(() => setNotes([]));
+    void listTikTokStreaks()
+      .then(setStreaks)
+      .catch(() => setStreaks([]));
   }, []);
 
   const primary = useMemo(
@@ -248,6 +253,42 @@ export function HomePage({ onNavigate }: Props) {
                     {note.title || t.noteTitlePlaceholder}
                   </p>
                 ))
+              )}
+            </CardContent>
+          </Card>
+        </BentoItem>
+        <BentoItem>
+          <Card
+            className="h-full cursor-pointer transition-colors hover:bg-accent/30"
+            onClick={() => onNavigate("tiktok")}
+          >
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="flex items-center gap-2">
+                <Flame className="size-4 text-primary" />
+                {t.tiktokTitle}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1.5">
+              {streaks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t.tiktokEmpty}</p>
+              ) : (
+                streaks.slice(0, 5).map((item) => {
+                  const done = isDoneToday(item);
+                  return (
+                    <div key={item.id} className="flex items-center justify-between gap-2">
+                      <p className="truncate text-sm">{item.name}</p>
+                      <span
+                        className={
+                          done
+                            ? "shrink-0 text-[11px] text-emerald-600 dark:text-emerald-400"
+                            : "shrink-0 text-[11px] text-amber-600 dark:text-amber-400"
+                        }
+                      >
+                        {done ? t.tiktokDoneToday : t.tiktokPending}
+                      </span>
+                    </div>
+                  );
+                })
               )}
             </CardContent>
           </Card>
