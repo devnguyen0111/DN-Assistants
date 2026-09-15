@@ -192,31 +192,38 @@ pub fn run() {
 
             #[cfg(desktop)]
             {
+                app.handle().plugin(tauri_plugin_process::init())?;
                 app.handle()
-                    .plugin(tauri_plugin_process::init())?;
-                app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
-                app.handle().plugin(
-                    tauri_plugin_window_state::Builder::default().build(),
-                )?;
-                app.handle().plugin(tauri_plugin_store::Builder::default().build())?;
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
+                app.handle()
+                    .plugin(tauri_plugin_window_state::Builder::default().build())?;
+                app.handle()
+                    .plugin(tauri_plugin_store::Builder::default().build())?;
                 app.handle().plugin(tauri_plugin_autostart::init(
                     tauri_plugin_autostart::MacosLauncher::LaunchAgent,
                     None,
                 ))?;
 
-                use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+                use tauri_plugin_global_shortcut::{
+                    Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+                };
 
-                let toggle_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
-                let clipboard_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV);
+                let toggle_shortcut =
+                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
+                let clipboard_shortcut =
+                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV);
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
                         .with_handler(|app, shortcut, event| {
                             if event.state != ShortcutState::Pressed {
                                 return;
                             }
-                            if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::Space) {
+                            if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::Space)
+                            {
                                 toggle_main_window(app);
-                            } else if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyV) {
+                            } else if shortcut
+                                .matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyV)
+                            {
                                 show_main_window(app);
                                 let _ = app.emit("open-clipboard", ());
                             }
