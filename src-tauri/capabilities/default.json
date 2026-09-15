@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": ["main", "widget-clock", "widget-focus", "widget-cpu"],
   "permissions": [
     "core:default",
     "opener:default",
@@ -19,12 +19,17 @@
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
+    "global-shortcut:allow-unregister-all",
     "store:default",
     "core:window:allow-hide",
     "core:window:allow-show",
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
     "core:window:allow-is-visible",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-set-always-on-top",
+    "core:webview:allow-create-webview-window",
     "log:default",
     "os:default",
     "process:default",
@@ -59,7 +64,11 @@
         { "url": "https://api.frankfurter.app/**" },
         { "url": "https://api.frankfurter.dev/**" },
         { "url": "https://api.open-meteo.com/**" },
-        { "url": "https://geocoding-api.open-meteo.com/**" }
+        { "url": "https://geocoding-api.open-meteo.com/**" },
+        { "url": "https://speed.cloudflare.com/**" },
+        { "url": "https://cdn.jsdelivr.net/**" },
+        { "url": "https://proof.ovh.net/**" },
+        { "url": "https://api.pwnedpasswords.com/**" }
       ]
     }
   ]

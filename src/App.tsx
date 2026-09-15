@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppShell } from "@/components/layout/AppShell";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { OnboardingDialog } from "@/components/layout/OnboardingDialog";
 import { ShortcutsDialog } from "@/components/layout/ShortcutsDialog";
+import { WhatsNewDialog } from "@/components/layout/WhatsNewDialog";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEventReminders } from "@/hooks/useEventReminders";
+import { useDesktopHotkeys } from "@/hooks/useDesktopHotkeys";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useTikTokStreakReminders } from "@/hooks/useTikTokStreakReminders";
+import { useVaultAutoLock } from "@/hooks/useVaultAutoLock";
+import { useMorningBrief } from "@/hooks/useMorningBrief";
 import { useHashRoute } from "@/hooks/useHashRoute";
 import { I18nProvider, useI18n } from "@/lib/i18n";
-import { SettingsProvider } from "@/lib/settings-context";
+import { parseWidgetKind } from "@/lib/routing";
+import { SettingsProvider, useSettings } from "@/lib/settings-context";
 import { ThemeProvider } from "@/lib/theme";
 import { promptUpdateIfAvailable } from "@/lib/updates";
 import { AboutPage } from "@/pages/AboutPage";
@@ -31,16 +36,27 @@ import { SystemPage } from "@/pages/SystemPage";
 import { TikTokPage } from "@/pages/TikTokPage";
 import { TodoPage } from "@/pages/TodoPage";
 import { WeatherPage } from "@/pages/WeatherPage";
+import { WidgetPage } from "@/pages/WidgetPage";
 
 function AppRoutes() {
   const { route, setRoute } = useHashRoute();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const { settings, updateSettings, ready } = useSettings();
+  const widgetKind = parseWidgetKind();
   useEventReminders();
   useTikTokStreakReminders();
+  useVaultAutoLock();
+  useMorningBrief();
   const { t } = useI18n();
 
-  const onNavigate = useCallback((r: typeof route) => setRoute(r), [setRoute]);
+  const onNavigate = useCallback(
+    (r: typeof route) => {
+      setRoute(r);
+      void updateSettings({ lastRoute: r });
+    },
+    [setRoute, updateSettings],
+  );
   const onTogglePalette = useCallback(() => setPaletteOpen((o) => !o), []);
   const onOpenShortcuts = useCallback(() => setShortcutsOpen(true), []);
 
@@ -49,16 +65,14 @@ function AppRoutes() {
     onTogglePalette,
     onOpenShortcuts,
   });
+  useDesktopHotkeys({ onNavigate });
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    void listen("open-clipboard", () => {
-      onNavigate("clipboard");
-    }).then((fn) => {
-      unlisten = fn;
-    });
-    return () => unlisten?.();
-  }, [onNavigate]);
+    if (!ready) return;
+    if (settings.lastRoute && settings.lastRoute !== route && !window.location.hash) {
+      setRoute(settings.lastRoute);
+    }
+  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -69,6 +83,15 @@ function AppRoutes() {
     }, 2500);
     return () => window.clearTimeout(timer);
   }, [t.installUpdate, t.updateAvailable]);
+
+  if (widgetKind) {
+    return (
+      <>
+        <WidgetPage kind={widgetKind} />
+        <Toaster richColors position="bottom-right" />
+      </>
+    );
+  }
 
   return (
     <AppShell route={route} onNavigate={onNavigate}>
@@ -88,13 +111,15 @@ function AppRoutes() {
       {route === "network" && <NetworkPage />}
       {route === "weather" && <WeatherPage />}
       {route === "settings" && <SettingsPage />}
-      {route === "about" && <AboutPage />}
+      {route === "about" && <AboutPage onNavigate={onNavigate} />}
       <CommandPalette
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
         onNavigate={onNavigate}
       />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <OnboardingDialog onNavigate={onNavigate} />
+      <WhatsNewDialog />
       <Toaster richColors position="bottom-right" />
     </AppShell>
   );

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "DN Assistant",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "identifier": "com.dn.assistant",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.open-meteo.com https://geocoding-api.open-meteo.com https://open.er-api.com https://latest.currency-api.pages.dev https://cdn.jsdelivr.net https://api.frankfurter.app https://api.frankfurter.dev https://api.ipify.org https://ipapi.co; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'",
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.open-meteo.com https://geocoding-api.open-meteo.com https://open.er-api.com https://latest.currency-api.pages.dev https://cdn.jsdelivr.net https://api.frankfurter.app https://api.frankfurter.dev https://api.ipify.org https://ipapi.co https://speed.cloudflare.com https://proof.ovh.net https://api.pwnedpasswords.com; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'",
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
@@ -46,7 +46,7 @@
     "copyright": "Copyright © DevNguyen",
     "category": "Utility",
     "shortDescription": "DN Assistant desktop utilities",
-    "longDescription": "DN Assistant is a desktop productivity companion offering system monitoring, clipboard history, calendar, focus timer, currency conversion, weather, and network tools in one lightweight app.",
+    "longDescription": "DN Assistant is a local-first desktop productivity companion with calendar, notes, password vault (TOTP), clipboard history, focus stats, floating widgets, network tools, encrypted backups, and system monitoring in one lightweight app.",
     "windows": {
       "nsis": {
         "installMode": "currentUser",

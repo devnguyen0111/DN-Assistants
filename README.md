@@ -2,22 +2,26 @@
 
 Desktop utility app built with **Tauri 2**, **React 19**, **shadcn/ui**, **Lucide**, and **Anime.js**.
 
+**Version 0.2.0**
+
 ## Features
 
-- Home dashboard with clock, agenda, system snapshot, and weather
-- Multi-page shell with grouped sidebar: Home, Clock, Calendar, Calculator, Currency, Dev tools, Notes, Todo, Clipboard, Passwords, Focus, System, Network, Weather, Settings, About
-- Command palette (`Ctrl+K`) for navigation, event search, vault password search, math, and currency queries (`100 usd to vnd`)
-- Live clock with solar + Vietnamese lunar date (Can Chi), configurable primary timezone, world clocks
-- Month calendar with schedule notes (SQLite), reminders (toast / OS notification / chime)
-- Calculator with persistent history + unit converter; separate currency exchange via Frankfurter
-- Notes and todos (SQLite), Pomodoro/Focus timer, developer toolbox (JSON/Base64/JWT/hash/UUID/QR/regex)
-- Clipboard history (opt-in, off by default) for **text and images** (including Snipping Tool / Win+Shift+S), with global hotkey `Ctrl+Shift+V`
-- Password vault with master-password AES-GCM encryption, CRUD, generator, Google/Chrome CSV import, and Ctrl+K search
-- System monitor: CPU, RAM, network (per-interface), NVIDIA GPU, disks, top processes (push metrics)
-- Network tools: public IP, ping, port check
-- Weather via Open-Meteo (no API key) with city search and 7-day forecast
-- Themes: light / dark / system, accent colors, density; bilingual vi/en
-- Desktop native: system tray, close-to-tray, autostart, window state restore, global hotkey (`Ctrl+Shift+Space`), single instance, auto-updater (checks on launch + Settings)
+- Home dashboard with greeting, quick actions, scratch pad, favorites, clock, agenda, system snapshot, weather, todos, notes, and TikTok streaks
+- Multi-page shell with grouped sidebar + pin-to-favorites, page-aware header, density modes, bilingual vi/en
+- First-run onboarding and What's New dialog after updates
+- Command palette (`Ctrl+K`) for navigation, events, notes, vault search, math, currency (`100 usd to vnd`), and scratch pad actions
+- Live clock with solar + Vietnamese lunar date (Can Chi), world clocks, floating clock widget
+- Month calendar with schedule notes (SQLite), reminders, recurring daily/weekly events, ICS import/export
+- Calculator with history + unit converter; currency exchange via Frankfurter / ExchangeRate-API
+- Notes with Markdown preview/split, tags, and pin; todos with priority, due dates, calendar linking, and recurrence
+- Clipboard history (opt-in) for text and images, transforms, pinned templates, save image to disk (`Ctrl+Shift+V`)
+- Password vault with AES-GCM, TOTP authenticator codes, auto-lock, password health, optional HIBP check, CSV import
+- Focus / Pomodoro timer with 7/30-day stats and floating widget
+- System monitor: CPU, RAM, network, NVIDIA GPU, disks, top processes with end-process; CPU widget
+- Network tools: public IP, ping, port check, DNS lookup, download speed test
+- Weather via Open-Meteo; developer toolbox (JSON/Base64/JWT/hash/UUID/QR/regex/time/diff)
+- Desktop native: tray, close-to-tray, autostart, always-on-top, custom global hotkeys, window state, single instance, auto-updater
+- Export/import JSON data + encrypted `.dnbackup` backups and diagnostics export
 
 ## Develop
 

@@ -1,3 +1,5 @@
+import type { AppRoute } from "@/lib/routing";
+
 export type AccentColor =
   | "teal"
   | "blue"
@@ -23,6 +25,19 @@ export type AppSettings = {
   focusWorkMinutes: number;
   focusBreakMinutes: number;
   focusLongBreakMinutes: number;
+  onboardingDone: boolean;
+  whatsNewSeenVersion: string;
+  favoriteRoutes: AppRoute[];
+  alwaysOnTop: boolean;
+  scratchpad: string;
+  vaultAutoLockMinutes: number;
+  hotkeyToggleWindow: string;
+  hotkeyClipboard: string;
+  hotkeyScratchpad: string;
+  clipboardTemplates: string[];
+  lastRoute: AppRoute;
+  morningBriefEnabled: boolean;
+  hibpCheckEnabled: boolean;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -40,6 +55,19 @@ export const DEFAULT_SETTINGS: AppSettings = {
   focusWorkMinutes: 25,
   focusBreakMinutes: 5,
   focusLongBreakMinutes: 15,
+  onboardingDone: false,
+  whatsNewSeenVersion: "",
+  favoriteRoutes: [],
+  alwaysOnTop: false,
+  scratchpad: "",
+  vaultAutoLockMinutes: 15,
+  hotkeyToggleWindow: "CommandOrControl+Shift+Space",
+  hotkeyClipboard: "CommandOrControl+Shift+V",
+  hotkeyScratchpad: "CommandOrControl+Shift+N",
+  clipboardTemplates: [],
+  lastRoute: "home",
+  morningBriefEnabled: false,
+  hibpCheckEnabled: false,
 };
 
 export const ACCENT_OPTIONS: AccentColor[] = [
@@ -50,6 +78,8 @@ export const ACCENT_OPTIONS: AccentColor[] = [
   "amber",
   "emerald",
 ];
+
+export const APP_VERSION = "0.2.0";
 
 const LS_KEY = "dn-assistant-settings";
 const STORE_FILE = "settings.json";
@@ -90,8 +120,19 @@ function writeLocal(settings: AppSettings) {
   localStorage.setItem(LS_KEY, JSON.stringify(settings));
 }
 
+function sanitize(partial: Partial<AppSettings>): Partial<AppSettings> {
+  const next = { ...partial };
+  if (next.favoriteRoutes) {
+    next.favoriteRoutes = next.favoriteRoutes.filter(Boolean);
+  }
+  if (next.clipboardTemplates) {
+    next.clipboardTemplates = next.clipboardTemplates.filter((t) => t.trim().length > 0);
+  }
+  return next;
+}
+
 export function loadSettingsSync(): AppSettings {
-  return { ...DEFAULT_SETTINGS, ...readLocal() };
+  return { ...DEFAULT_SETTINGS, ...sanitize(readLocal()) };
 }
 
 export async function loadSettings(): Promise<AppSettings> {
@@ -101,7 +142,7 @@ export async function loadSettings(): Promise<AppSettings> {
     if (!store) return local;
     const stored = await store.get<Partial<AppSettings>>("app");
     if (!stored) return local;
-    const merged = { ...DEFAULT_SETTINGS, ...local, ...stored };
+    const merged = { ...DEFAULT_SETTINGS, ...local, ...sanitize(stored) };
     writeLocal(merged);
     return merged;
   } catch {
@@ -109,8 +150,17 @@ export async function loadSettings(): Promise<AppSettings> {
   }
 }
 
+async function applyAlwaysOnTop(enabled: boolean) {
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().setAlwaysOnTop(enabled);
+  } catch {
+    // ignore outside Tauri
+  }
+}
+
 export async function saveSettings(partial: Partial<AppSettings>): Promise<AppSettings> {
-  const next = { ...loadSettingsSync(), ...partial };
+  const next = { ...loadSettingsSync(), ...sanitize(partial) };
   writeLocal(next);
   try {
     const store = await getStore();
@@ -137,6 +187,9 @@ export async function saveSettings(partial: Partial<AppSettings>): Promise<AppSe
       // ignore outside Tauri
     }
   }
+  if (partial.alwaysOnTop !== undefined) {
+    await applyAlwaysOnTop(next.alwaysOnTop);
+  }
   window.dispatchEvent(new CustomEvent("dn-settings-changed", { detail: next }));
   return next;
 }
@@ -153,4 +206,9 @@ export function subscribeSettings(cb: (s: AppSettings) => void): () => void {
 /** Expose store helper for currency cache and other modules. */
 export async function getAppStore(): Promise<StoreLike | null> {
   return getStore();
+}
+
+/** Apply window flags that must run after Tauri is ready. */
+export async function applyDesktopWindowPrefs(settings: AppSettings) {
+  await applyAlwaysOnTop(settings.alwaysOnTop);
 }

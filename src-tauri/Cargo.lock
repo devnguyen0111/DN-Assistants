@@ -1113,7 +1113,7 @@ dependencies = [
 
 [[package]]
 name = "dn-assistant"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "image",
  "nvml-wrapper",

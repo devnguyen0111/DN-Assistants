@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShieldAlert,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState, LoadingState } from "@/components/ui/state-block";
 import {
   AlertDialog,
@@ -30,6 +32,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
+import { useSettings } from "@/lib/settings-context";
+import { generateTotp } from "@/lib/totp";
+import {
+  checkHibp,
+  findReusedPasswords,
+  passwordStrength,
+} from "@/lib/vault-health";
 import { parseGooglePasswordCsv } from "@/lib/vault-csv";
 import {
   createVaultEntry,
@@ -54,6 +63,7 @@ type FormState = {
   username: string;
   password: string;
   note: string;
+  totpSecret: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -62,10 +72,12 @@ const emptyForm = (): FormState => ({
   username: "",
   password: "",
   note: "",
+  totpSecret: "",
 });
 
 export function PasswordsCard() {
   const { t } = useI18n();
+  const { settings } = useSettings();
   const [ready, setReady] = useState(false);
   const [vaultExists, setVaultExists] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -84,6 +96,11 @@ export function PasswordsCard() {
   const [genUpper, setGenUpper] = useState(true);
   const [genDigits, setGenDigits] = useState(true);
   const [genSymbols, setGenSymbols] = useState(true);
+  const [totpLive, setTotpLive] = useState<{ code: string; remaining: number } | null>(
+    null,
+  );
+  const [hibpBusy, setHibpBusy] = useState(false);
+  const [hibpResult, setHibpResult] = useState<number | null>(null);
 
   const refreshMeta = async () => {
     setLoading(true);
@@ -122,6 +139,35 @@ export function PasswordsCard() {
     [entries, selectedId],
   );
 
+  const reusedIds = useMemo(
+    () => findReusedPasswords(entries.map((e) => ({ id: e.id, password: e.password }))),
+    [entries],
+  );
+
+  const activeTotpSecret =
+    (selected?.totpSecret || form.totpSecret || "").trim() || "";
+
+  useEffect(() => {
+    if (!unlocked || !activeTotpSecret) {
+      setTotpLive(null);
+      return;
+    }
+    const tick = () => {
+      try {
+        setTotpLive(generateTotp(activeTotpSecret));
+      } catch {
+        setTotpLive(null);
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [unlocked, activeTotpSecret, selectedId]);
+
+  useEffect(() => {
+    setHibpResult(null);
+  }, [form.password, selectedId]);
+
   const selectEntry = (entry: VaultEntry) => {
     setSelectedId(entry.id);
     setForm({
@@ -130,6 +176,7 @@ export function PasswordsCard() {
       username: entry.username,
       password: entry.password,
       note: entry.note,
+      totpSecret: entry.totpSecret ?? "",
     });
     setShowPassword(false);
   };
@@ -162,6 +209,7 @@ export function PasswordsCard() {
         username: form.username,
         password: form.password,
         note: form.note,
+        totpSecret: form.totpSecret,
       };
       if (selectedId) {
         await updateVaultEntry(selectedId, payload);
@@ -248,6 +296,24 @@ export function PasswordsCard() {
     setShowPassword(true);
   };
 
+  const onHibpCheck = async () => {
+    if (!form.password) return;
+    try {
+      setHibpBusy(true);
+      const { count } = await checkHibp(form.password);
+      setHibpResult(count);
+      if (count > 0) {
+        toast.warning(t.vaultHibpFound.replace("{n}", String(count)));
+      } else {
+        toast.success(t.vaultHibpClean);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setHibpBusy(false);
+    }
+  };
+
   const onImportCsv = async () => {
     try {
       setBusy(true);
@@ -271,7 +337,7 @@ export function PasswordsCard() {
           skipped += 1;
           continue;
         }
-        await createVaultEntry(row);
+        await createVaultEntry({ ...row, totpSecret: "" });
         existing.add(key);
         imported += 1;
       }
@@ -404,23 +470,41 @@ export function PasswordsCard() {
                 <EmptyState title={t.vaultEmpty} />
               ) : (
                 <div className="space-y-1">
-                  {filtered.map((entry) => (
-                    <button
-                      key={entry.id}
-                      type="button"
-                      className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
-                        selectedId === entry.id
-                          ? "border-primary/40 bg-primary/5"
-                          : "border-transparent hover:bg-muted/50"
-                      }`}
-                      onClick={() => selectEntry(entry)}
-                    >
-                      <p className="truncate text-sm font-medium">{entry.title}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {entry.username || entryHost(entry.url) || "—"}
-                      </p>
-                    </button>
-                  ))}
+                  {filtered.map((entry) => {
+                    const weak = passwordStrength(entry.password) === "weak";
+                    const reused = reusedIds.has(entry.id);
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
+                          selectedId === entry.id
+                            ? "border-primary/40 bg-primary/5"
+                            : "border-transparent hover:bg-muted/50"
+                        }`}
+                        onClick={() => selectEntry(entry)}
+                      >
+                        <p className="truncate text-sm font-medium">{entry.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {entry.username || entryHost(entry.url) || "—"}
+                        </p>
+                        {(weak || reused) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {weak && (
+                              <Badge variant="destructive" className="text-[10px] font-normal">
+                                {t.vaultHealthWeak}
+                              </Badge>
+                            )}
+                            {reused && (
+                              <Badge variant="secondary" className="text-[10px] font-normal">
+                                {t.vaultHealthReused}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>
@@ -507,6 +591,39 @@ export function PasswordsCard() {
                 </div>
               </div>
               <div className="space-y-1.5 sm:col-span-2">
+                <Label>{t.vaultTotpSecret}</Label>
+                <Input
+                  value={form.totpSecret}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, totpSecret: e.target.value }))
+                  }
+                  placeholder={t.vaultTotpHint}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              {totpLive && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>{t.vaultTotp}</Label>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-2xl tracking-[0.2em] tabular-nums">
+                      {totpLive.code}
+                    </p>
+                    <Badge variant="secondary" className="font-mono tabular-nums">
+                      {totpLive.remaining}s
+                    </Badge>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      title={t.vaultCopyTotp}
+                      onClick={() => void copyText(totpLive.code, t.vaultTotp)}
+                    >
+                      <Copy className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1.5 sm:col-span-2">
                 <Label>{t.vaultFieldNote}</Label>
                 <Textarea
                   rows={3}
@@ -515,6 +632,55 @@ export function PasswordsCard() {
                 />
               </div>
             </div>
+
+            {form.password && (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">{t.vaultHealthTitle}:</span>
+                {passwordStrength(form.password) === "weak" ? (
+                  <Badge variant="destructive" className="font-normal">
+                    {t.vaultHealthWeak}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="font-normal">
+                    {t.vaultHealthOk}
+                  </Badge>
+                )}
+                {selectedId && reusedIds.has(selectedId) && (
+                  <Badge variant="secondary" className="font-normal">
+                    {t.vaultHealthReused}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {settings.hibpCheckEnabled && (
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      <ShieldAlert className="size-3.5" />
+                      {t.vaultHibpCheck}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t.vaultHibpHint}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={hibpBusy || !form.password}
+                    onClick={() => void onHibpCheck()}
+                  >
+                    {t.vaultHibpCheck}
+                  </Button>
+                </div>
+                {hibpResult != null && (
+                  <p className="text-xs">
+                    {hibpResult > 0
+                      ? t.vaultHibpFound.replace("{n}", String(hibpResult))
+                      : t.vaultHibpClean}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
               <div className="flex items-center justify-between">

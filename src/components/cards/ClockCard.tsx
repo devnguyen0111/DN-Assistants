@@ -184,6 +184,13 @@ export function ClockCard() {
           {t.clock}
         </CardTitle>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void import("@/lib/routing").then((m) => m.openWidgetWindow("clock"))}
+          >
+            {t.openWidget}
+          </Button>
           <Badge variant="secondary">{t.primaryZone}</Badge>
           <Badge variant="outline">{liveGmtLabel(now, settings.primaryTimezone)}</Badge>
         </div>

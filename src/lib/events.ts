@@ -1,5 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 
+export type EventRepeat = "none" | "daily" | "weekly";
+
 export type CalendarEvent = {
   id: number;
   title: string;
@@ -9,6 +11,8 @@ export type CalendarEvent = {
   all_day: number;
   color: string | null;
   remind_minutes: number;
+  repeat: EventRepeat;
+  repeat_until: number | null;
   created_at: number;
   updated_at: number;
 };
@@ -21,6 +25,8 @@ export type EventInput = {
   all_day?: boolean;
   color?: string;
   remind_minutes?: number;
+  repeat?: EventRepeat;
+  repeat_until?: number | null;
 };
 
 const DB_URL = "sqlite:dn-assistant.db";
@@ -33,10 +39,17 @@ async function getDb() {
   return dbPromise;
 }
 
+function normalizeRepeat(value: unknown): EventRepeat {
+  if (value === "daily" || value === "weekly") return value;
+  return "none";
+}
+
 function normalizeEvent(row: CalendarEvent): CalendarEvent {
   return {
     ...row,
     remind_minutes: row.remind_minutes ?? 0,
+    repeat: normalizeRepeat(row.repeat),
+    repeat_until: row.repeat_until ?? null,
   };
 }
 
@@ -64,12 +77,12 @@ export async function listUpcoming(limit = 12): Promise<CalendarEvent[]> {
   return rows.map(normalizeEvent);
 }
 
-export async function createEvent(input: EventInput): Promise<void> {
+export async function createEvent(input: EventInput): Promise<number> {
   const db = await getDb();
   const now = Date.now();
-  await db.execute(
-    `INSERT INTO events (title, note, start_at, end_at, all_day, color, remind_minutes, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+  const result = await db.execute(
+    `INSERT INTO events (title, note, start_at, end_at, all_day, color, remind_minutes, repeat, repeat_until, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       input.title,
       input.note ?? null,
@@ -78,10 +91,13 @@ export async function createEvent(input: EventInput): Promise<void> {
       input.all_day ? 1 : 0,
       input.color ?? "#38bdf8",
       input.remind_minutes ?? 0,
+      input.repeat ?? "none",
+      input.repeat_until ?? null,
       now,
       now,
     ],
   );
+  return Number(result.lastInsertId ?? 0);
 }
 
 export async function updateEvent(id: number, input: EventInput): Promise<void> {
@@ -89,8 +105,8 @@ export async function updateEvent(id: number, input: EventInput): Promise<void> 
   await db.execute(
     `UPDATE events
      SET title = $1, note = $2, start_at = $3, end_at = $4, all_day = $5, color = $6,
-         remind_minutes = $7, updated_at = $8
-     WHERE id = $9`,
+         remind_minutes = $7, repeat = $8, repeat_until = $9, updated_at = $10
+     WHERE id = $11`,
     [
       input.title,
       input.note ?? null,
@@ -99,8 +115,71 @@ export async function updateEvent(id: number, input: EventInput): Promise<void> 
       input.all_day ? 1 : 0,
       input.color ?? "#38bdf8",
       input.remind_minutes ?? 0,
+      input.repeat ?? "none",
+      input.repeat_until ?? null,
       Date.now(),
       id,
+    ],
+  );
+}
+
+/** Insert with explicit id when present (import), otherwise autoincrement. */
+export async function upsertEventFromImport(event: CalendarEvent): Promise<void> {
+  const db = await getDb();
+  const now = Date.now();
+  const repeat = normalizeRepeat(event.repeat);
+  const repeatUntil = event.repeat_until ?? null;
+  const created = event.created_at ?? now;
+  const updated = event.updated_at ?? now;
+
+  if (event.id != null && Number.isFinite(Number(event.id))) {
+    await db.execute(
+      `INSERT INTO events (id, title, note, start_at, end_at, all_day, color, remind_minutes, repeat, repeat_until, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         note = excluded.note,
+         start_at = excluded.start_at,
+         end_at = excluded.end_at,
+         all_day = excluded.all_day,
+         color = excluded.color,
+         remind_minutes = excluded.remind_minutes,
+         repeat = excluded.repeat,
+         repeat_until = excluded.repeat_until,
+         updated_at = excluded.updated_at`,
+      [
+        Number(event.id),
+        event.title,
+        event.note ?? null,
+        event.start_at,
+        event.end_at ?? null,
+        event.all_day ? 1 : 0,
+        event.color ?? "#38bdf8",
+        event.remind_minutes ?? 0,
+        repeat,
+        repeatUntil,
+        created,
+        updated,
+      ],
+    );
+    return;
+  }
+
+  await db.execute(
+    `INSERT INTO events (title, note, start_at, end_at, all_day, color, remind_minutes, repeat, repeat_until, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      event.title,
+      event.note ?? null,
+      event.start_at,
+      event.end_at ?? null,
+      event.all_day ? 1 : 0,
+      event.color ?? "#38bdf8",
+      event.remind_minutes ?? 0,
+      repeat,
+      repeatUntil,
+      created,
+      updated,
     ],
   );
 }
@@ -108,6 +187,24 @@ export async function updateEvent(id: number, input: EventInput): Promise<void> 
 export async function deleteEvent(id: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM events WHERE id = $1", [id]);
+}
+
+/** Next daily/weekly occurrence after fromMs, within repeat_until if set. */
+export function nextOccurrence(event: CalendarEvent, fromMs: number): number | null {
+  const repeat = normalizeRepeat(event.repeat);
+  if (repeat === "none") return null;
+
+  const stepMs = repeat === "daily" ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+  const until = event.repeat_until;
+  let t = event.start_at;
+
+  while (t <= fromMs) {
+    t += stepMs;
+    if (until != null && t > until) return null;
+  }
+
+  if (until != null && t > until) return null;
+  return t;
 }
 
 export function startOfDay(ms: number) {

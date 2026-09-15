@@ -59,6 +59,8 @@ export function DevToolsCard() {
             <TabsTrigger value="uuid">{t.uuid}</TabsTrigger>
             <TabsTrigger value="qr">{t.qrCode}</TabsTrigger>
             <TabsTrigger value="regex">{t.regexTester}</TabsTrigger>
+            <TabsTrigger value="time">Time</TabsTrigger>
+            <TabsTrigger value="diff">Diff</TabsTrigger>
           </TabsList>
 
           <TabsContent value="json"><JsonTab /></TabsContent>
@@ -69,6 +71,8 @@ export function DevToolsCard() {
           <TabsContent value="uuid"><UuidTab /></TabsContent>
           <TabsContent value="qr"><QrTab /></TabsContent>
           <TabsContent value="regex"><RegexTab /></TabsContent>
+          <TabsContent value="time"><TimeTab /></TabsContent>
+          <TabsContent value="diff"><DiffTab /></TabsContent>
         </Tabs>
       </CardContent>
     </Card>
@@ -401,6 +405,118 @@ function RegexTab() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TimeTab() {
+  const { t } = useI18n();
+  const [unix, setUnix] = useState(() => String(Math.floor(Date.now() / 1000)));
+  const [iso, setIso] = useState(() => new Date().toISOString());
+
+  const fromUnix = () => {
+    const n = Number(unix);
+    if (!Number.isFinite(n)) return;
+    setIso(new Date(n * (Math.abs(n) < 1e12 ? 1000 : 1)).toISOString());
+  };
+
+  const fromIso = () => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return;
+    setUnix(String(Math.floor(d.getTime() / 1000)));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Input
+          className="font-mono"
+          value={unix}
+          onChange={(e) => setUnix(e.target.value)}
+          placeholder="Unix timestamp"
+        />
+        <Button size="sm" variant="secondary" onClick={fromUnix}>
+          → ISO
+        </Button>
+      </div>
+      <div className="flex gap-2">
+        <Input
+          className="font-mono"
+          value={iso}
+          onChange={(e) => setIso(e.target.value)}
+          placeholder="ISO 8601"
+        />
+        <Button size="sm" variant="secondary" onClick={fromIso}>
+          → Unix
+        </Button>
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          const now = Date.now();
+          setUnix(String(Math.floor(now / 1000)));
+          setIso(new Date(now).toISOString());
+        }}
+      >
+        <RefreshCw className="size-3.5" />
+        Now
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => void copyText(`${unix}\n${iso}`, t.copied)}
+      >
+        <Copy className="size-3.5" />
+        {t.copyResult}
+      </Button>
+    </div>
+  );
+}
+
+function DiffTab() {
+  const { t } = useI18n();
+  const [a, setA] = useState("line one\nline two\nline three");
+  const [b, setB] = useState("line one\nline 2\nline three");
+
+  const rows = useMemo(() => {
+    const la = a.split("\n");
+    const lb = b.split("\n");
+    const max = Math.max(la.length, lb.length);
+    const out: Array<{ n: number; left: string; right: string; same: boolean }> = [];
+    for (let i = 0; i < max; i++) {
+      const left = la[i] ?? "";
+      const right = lb[i] ?? "";
+      out.push({ n: i + 1, left, right, same: left === right });
+    }
+    return out;
+  }, [a, b]);
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-2 md:grid-cols-2">
+        <Textarea rows={8} value={a} onChange={(e) => setA(e.target.value)} placeholder="A" />
+        <Textarea rows={8} value={b} onChange={(e) => setB(e.target.value)} placeholder="B" />
+      </div>
+      <div className="max-h-64 space-y-0.5 overflow-auto rounded-lg border p-2 font-mono text-xs">
+        {rows.map((r) => (
+          <div
+            key={r.n}
+            className={
+              r.same
+                ? "grid grid-cols-[2rem_1fr_1fr] gap-2 px-1 py-0.5 text-muted-foreground"
+                : "grid grid-cols-[2rem_1fr_1fr] gap-2 bg-destructive/10 px-1 py-0.5"
+            }
+          >
+            <span>{r.n}</span>
+            <span className="truncate">{r.left || "∅"}</span>
+            <span className="truncate">{r.right || "∅"}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {rows.filter((r) => !r.same).length} {t.output.toLowerCase()}
+      </p>
     </div>
   );
 }

@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Copy, ImageIcon, Pin, PinOff, Search, Trash2, Type } from "lucide-react";
+import {
+  ClipboardList,
+  Copy,
+  ImageIcon,
+  Pin,
+  PinOff,
+  Save,
+  Search,
+  Trash2,
+  Type,
+  Wand2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +27,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { localeTag, useI18n } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings-context";
 import {
@@ -33,6 +51,29 @@ import {
 } from "@/lib/clipboard-history";
 
 type Filter = "all" | ClipboardKind;
+type TransformKind = "upper" | "lower" | "title" | "json" | "trim";
+
+function toTitleCase(text: string) {
+  return text.replace(/\w\S*/g, (word) => {
+    const lower = word.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  });
+}
+
+function applyTransform(content: string, kind: TransformKind): string {
+  switch (kind) {
+    case "upper":
+      return content.toUpperCase();
+    case "lower":
+      return content.toLowerCase();
+    case "title":
+      return toTitleCase(content);
+    case "json":
+      return JSON.stringify(JSON.parse(content), null, 2);
+    case "trim":
+      return content.trim();
+  }
+}
 
 function ClipboardThumb({ path }: { path: string }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -65,12 +106,14 @@ function ClipboardThumb({ path }: { path: string }) {
 export function ClipboardCard() {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const [items, setItems] = useState<ClipboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [confirmClear, setConfirmClear] = useState(false);
+
+  const templates = settings.clipboardTemplates ?? [];
 
   const refresh = async () => {
     setLoading(true);
@@ -139,6 +182,71 @@ export function ClipboardCard() {
     }
   };
 
+  const writeTransformed = async (content: string, kind: TransformKind) => {
+    try {
+      const next = applyTransform(content, kind);
+      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+      await writeText(next);
+      toast.success(t.copied);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const copyTemplate = async (text: string) => {
+    try {
+      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+      await writeText(text);
+      toast.success(t.copied);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const addTemplate = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    if (templates.includes(trimmed)) {
+      toast.success(t.copied);
+      return;
+    }
+    try {
+      await updateSettings({ clipboardTemplates: [...templates, trimmed] });
+      toast.success(t.clipboardTemplateAdd);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const removeTemplate = async (index: number) => {
+    try {
+      await updateSettings({
+        clipboardTemplates: templates.filter((_, i) => i !== index),
+      });
+      toast.success(t.deleted);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const saveImage = async (item: ClipboardItem) => {
+    if (item.kind !== "image" || !item.content) return;
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { readFile, writeFile } = await import("@tauri-apps/plugin-fs");
+      const path = await save({
+        defaultPath: `clipboard-${item.id}.png`,
+        filters: [{ name: "PNG", extensions: ["png"] }],
+      });
+      if (!path) return;
+      const bytes = await readFile(item.content);
+      await writeFile(path, bytes);
+      toast.success(t.save);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const togglePin = async (item: ClipboardItem) => {
     try {
       if (item.pinned) await unpinItem(item.id);
@@ -187,6 +295,41 @@ export function ClipboardCard() {
               {t.clipboardEnabledHint}
             </p>
           )}
+
+          <div className="space-y-2 rounded-lg border border-border/60 p-2.5">
+            <p className="text-xs font-medium text-muted-foreground">{t.clipboardTemplates}</p>
+            {templates.length === 0 ? (
+              <p className="text-xs text-muted-foreground">—</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {templates.map((tpl, index) => (
+                  <div
+                    key={`${index}-${tpl.slice(0, 24)}`}
+                    className="group flex max-w-full items-center gap-0.5 rounded-md border bg-muted/30 pl-2"
+                  >
+                    <button
+                      type="button"
+                      className="max-w-[12rem] truncate py-1 text-left text-xs hover:underline"
+                      title={tpl}
+                      onClick={() => void copyTemplate(tpl)}
+                    >
+                      {tpl}
+                    </button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-6 shrink-0 opacity-60 group-hover:opacity-100"
+                      title={t.delete}
+                      onClick={() => void removeTemplate(index)}
+                    >
+                      <X className="size-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-1.5">
             {(
               [
@@ -252,38 +395,97 @@ export function ClipboardCard() {
                         }).format(new Date(item.created_at))}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        title={item.pinned ? t.clipboardUnpin : t.clipboardPin}
-                        onClick={() => void togglePin(item)}
-                      >
-                        {item.pinned ? (
-                          <PinOff className="size-3.5" />
-                        ) : (
-                          <Pin className="size-3.5" />
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        title={t.clipboardCopy}
-                        onClick={() => void copyItem(item)}
-                      >
-                        <Copy className="size-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        title={t.delete}
-                        onClick={() => void remove(item.id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-7"
+                          title={item.pinned ? t.clipboardUnpin : t.clipboardPin}
+                          onClick={() => void togglePin(item)}
+                        >
+                          {item.pinned ? (
+                            <PinOff className="size-3.5" />
+                          ) : (
+                            <Pin className="size-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-7"
+                          title={t.clipboardCopy}
+                          onClick={() => void copyItem(item)}
+                        >
+                          <Copy className="size-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-7"
+                          title={t.delete}
+                          onClick={() => void remove(item.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                      {item.kind === "text" ? (
+                        <div className="flex items-center gap-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                                <Wand2 className="mr-1 size-3" />
+                                {t.clipboardTransform}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => void writeTransformed(item.content, "upper")}
+                              >
+                                {t.clipboardUpper}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => void writeTransformed(item.content, "lower")}
+                              >
+                                {t.clipboardLower}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => void writeTransformed(item.content, "title")}
+                              >
+                                {t.clipboardTitleCase}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => void writeTransformed(item.content, "json")}
+                              >
+                                {t.clipboardJsonPretty}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => void writeTransformed(item.content, "trim")}
+                              >
+                                {t.clipboardTrim}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => void addTemplate(item.content)}
+                          >
+                            {t.clipboardTemplateAdd}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => void saveImage(item)}
+                        >
+                          <Save className="mr-1 size-3" />
+                          {t.clipboardSaveImage}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

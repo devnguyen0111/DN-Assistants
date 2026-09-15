@@ -1,24 +1,30 @@
-import { Keyboard, Languages, Moon, Sun, Monitor } from "lucide-react";
+import { Keyboard, Languages, Moon, Sun, Monitor, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/lib/i18n";
+import { pageDesc, pageTitle } from "@/lib/page-meta";
+import { useSettings } from "@/lib/settings-context";
 import { useTheme } from "@/lib/theme";
 import type { AppRoute } from "@/lib/routing";
 
 type Props = {
+  route: AppRoute;
   onNavigate?: (route: AppRoute) => void;
   onOpenShortcuts?: () => void;
 };
 
-export function AppHeader({ onNavigate, onOpenShortcuts }: Props) {
+export function AppHeader({ route, onNavigate, onOpenShortcuts }: Props) {
   const { t, locale, toggleLocale } = useI18n();
   const { mode, theme, toggleTheme } = useTheme();
+  const { settings, updateSettings } = useSettings();
 
   return (
     <header className="mb-6 flex flex-wrap items-center justify-end gap-3 md:justify-between">
-      <div className="hidden md:block">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t.appName}</h1>
-        <p className="text-sm text-muted-foreground">{t.appTagline}</p>
+      <div className="hidden min-w-0 flex-1 md:block">
+        <h1 className="truncate text-2xl font-semibold tracking-tight md:text-3xl">
+          {pageTitle(t, route)}
+        </h1>
+        <p className="truncate text-sm text-muted-foreground">{pageDesc(t, route)}</p>
       </div>
       <div className="flex items-center gap-2 rounded-xl border bg-card/70 p-1.5 backdrop-blur">
         <Button
@@ -31,6 +37,14 @@ export function AppHeader({ onNavigate, onOpenShortcuts }: Props) {
           {t.commandHint}
         </Button>
         <Separator orientation="vertical" className="h-6" />
+        <Button
+          variant={settings.alwaysOnTop ? "secondary" : "ghost"}
+          size="icon"
+          onClick={() => void updateSettings({ alwaysOnTop: !settings.alwaysOnTop })}
+          title={t.alwaysOnTop}
+        >
+          {settings.alwaysOnTop ? <Pin className="size-4" /> : <PinOff className="size-4" />}
+        </Button>
         <Button
           variant="ghost"
           size="icon"

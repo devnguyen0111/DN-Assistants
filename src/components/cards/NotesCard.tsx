@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { NotebookPen, Plus, Search, Trash2 } from "lucide-react";
+import { NotebookPen, Pin, Plus, Search, Trash2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState, LoadingState } from "@/components/ui/state-block";
 import {
   AlertDialog,
@@ -24,6 +27,9 @@ import {
   updateNote,
   type Note,
 } from "@/lib/notes";
+import { cn } from "@/lib/utils";
+
+type ViewMode = "edit" | "preview" | "split";
 
 export function NotesCard() {
   const { locale, t } = useI18n();
@@ -34,6 +40,9 @@ export function NotesCard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [tags, setTags] = useState("");
+  const [pinned, setPinned] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("edit");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const refresh = async (q = query) => {
@@ -68,21 +77,31 @@ export function NotesCard() {
     setSelectedId(note.id);
     setTitle(note.title);
     setBody(note.body);
+    setTags(note.tags ?? "");
+    setPinned(note.pinned === 1);
   };
 
   const startNew = () => {
     setSelectedId(null);
     setTitle("");
     setBody("");
+    setTags("");
+    setPinned(false);
   };
 
   const save = async () => {
     if (!title.trim() && !body.trim()) return;
     try {
+      const payload = {
+        title: title.trim() || t.noteTitlePlaceholder,
+        body,
+        tags: tags.trim(),
+        pinned,
+      };
       if (selectedId) {
-        await updateNote(selectedId, { title: title.trim() || t.noteTitlePlaceholder, body });
+        await updateNote(selectedId, payload);
       } else {
-        const created = await createNote({ title: title.trim() || t.noteTitlePlaceholder, body });
+        const created = await createNote(payload);
         setSelectedId(created.id);
       }
       toast.success(t.saved);
@@ -103,6 +122,16 @@ export function NotesCard() {
       setConfirmDelete(false);
     }
   };
+
+  const preview = (
+    <div className="prose prose-sm dark:prose-invert max-w-none rounded-lg border bg-muted/10 p-3 text-sm [&_pre]:overflow-x-auto [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
+      {body.trim() ? (
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+      ) : (
+        <p className="text-muted-foreground">{t.noteBodyPlaceholder}</p>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -139,17 +168,30 @@ export function NotesCard() {
                     <button
                       key={note.id}
                       type="button"
-                      className={`block w-full rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent ${
-                        note.id === selectedId ? "border-primary bg-accent" : "border-border/60"
-                      }`}
+                      className={cn(
+                        "block w-full rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent",
+                        note.id === selectedId ? "border-primary bg-accent" : "border-border/60",
+                      )}
                       onClick={() => selectNote(note)}
                     >
-                      <p className="truncate text-sm font-medium">
-                        {note.title || t.noteTitlePlaceholder}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        {note.pinned === 1 && <Pin className="size-3 shrink-0 text-primary" />}
+                        <p className="truncate text-sm font-medium">
+                          {note.title || t.noteTitlePlaceholder}
+                        </p>
+                      </div>
                       <p className="line-clamp-1 text-xs text-muted-foreground">
                         {note.body || "—"}
                       </p>
+                      {note.tags ? (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {note.tags.split(",").map((x) => x.trim()).filter(Boolean).map((tg) => (
+                            <Badge key={tg} variant="secondary" className="text-[10px]">
+                              {tg}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null}
                       <p className="mt-1 font-mono text-[10px] text-muted-foreground">
                         {new Intl.DateTimeFormat(tag, {
                           dateStyle: "short",
@@ -165,9 +207,30 @@ export function NotesCard() {
         </Card>
 
         <Card className="h-full">
-          <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
             <CardTitle>{selected ? t.notesTitle : t.newNote}</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-lg border p-0.5">
+                {(["edit", "preview", "split"] as ViewMode[]).map((m) => (
+                  <Button
+                    key={m}
+                    size="sm"
+                    variant={viewMode === m ? "secondary" : "ghost"}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setViewMode(m)}
+                  >
+                    {m === "edit" ? t.notesEdit : m === "preview" ? t.notesPreview : t.notesSplit}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                variant={pinned ? "secondary" : "ghost"}
+                onClick={() => setPinned((p) => !p)}
+                title={pinned ? t.notesUnpin : t.notesPin}
+              >
+                <Pin className="size-4" />
+              </Button>
               {selectedId && (
                 <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
                   <Trash2 className="size-4" />
@@ -186,13 +249,34 @@ export function NotesCard() {
               onChange={(e) => setTitle(e.target.value)}
               className="text-base font-medium"
             />
-            <Textarea
-              placeholder={t.noteBodyPlaceholder}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={16}
-              className="resize-none"
+            <Input
+              placeholder={t.notesTagsPlaceholder}
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              aria-label={t.notesTags}
             />
+            {viewMode === "edit" && (
+              <Textarea
+                placeholder={t.noteBodyPlaceholder}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={16}
+                className="resize-none font-mono text-sm"
+              />
+            )}
+            {viewMode === "preview" && <ScrollArea className="h-[360px]">{preview}</ScrollArea>}
+            {viewMode === "split" && (
+              <div className="grid gap-3 md:grid-cols-2">
+                <Textarea
+                  placeholder={t.noteBodyPlaceholder}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={16}
+                  className="resize-none font-mono text-sm"
+                />
+                <ScrollArea className="h-[360px]">{preview}</ScrollArea>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -113,3 +113,26 @@ pub fn check_port(host: String, port: u16) -> bool {
         Err(_) => false,
     }
 }
+
+/// Resolves `host` to unique IP address strings via DNS (`ToSocketAddrs`).
+#[tauri::command]
+pub fn dns_lookup(host: String) -> Result<Vec<String>, String> {
+    let addr = format!("{host}:0");
+    let addrs = addr
+        .to_socket_addrs()
+        .map_err(|e| format!("DNS lookup failed for {host}: {e}"))?;
+
+    let mut ips = Vec::new();
+    for socket_addr in addrs {
+        let ip = socket_addr.ip().to_string();
+        if !ips.contains(&ip) {
+            ips.push(ip);
+        }
+    }
+
+    if ips.is_empty() {
+        Err(format!("No addresses found for {host}"))
+    } else {
+        Ok(ips)
+    }
+}

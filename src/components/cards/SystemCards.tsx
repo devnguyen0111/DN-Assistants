@@ -1,7 +1,19 @@
-import { Cpu, Gauge, HardDrive, MemoryStick, Network, Thermometer } from "lucide-react";
+import { useState } from "react";
+import { Cpu, Gauge, HardDrive, MemoryStick, Network, Thermometer, X } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { useI18n, localeTag } from "@/lib/i18n";
 import { formatBytes, formatPercent, formatRate } from "@/lib/utils";
@@ -32,9 +44,19 @@ export function CpuCard({ stats, history }: Props) {
           <Cpu className="size-4 text-primary" />
           {t.cpu}
         </CardTitle>
-        <Badge variant="secondary" className="min-w-[4.5ch] justify-center font-mono tabular-nums">
-          {stats ? formatPercent(usage, tag) : <StatSkeleton />}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7"
+            onClick={() => void import("@/lib/routing").then((m) => m.openWidgetWindow("cpu"))}
+          >
+            {t.openWidget}
+          </Button>
+          <Badge variant="secondary" className="min-w-[4.5ch] justify-center font-mono tabular-nums">
+            {stats ? formatPercent(usage, tag) : <StatSkeleton />}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="line-clamp-2 min-h-8 text-xs text-muted-foreground">
@@ -256,44 +278,101 @@ export function ProcessesCard({ stats }: { stats: SystemStats | null }) {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
   const processes = stats?.processes ?? [];
+  const [pendingKill, setPendingKill] = useState<{ pid: number; name: string } | null>(null);
+  const [killing, setKilling] = useState(false);
+
+  const confirmKill = async () => {
+    if (!pendingKill) return;
+    setKilling(true);
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("kill_process", { pid: pendingKill.pid });
+      toast.success(t.killProcessSuccess);
+      setPendingKill(null);
+    } catch {
+      toast.error(t.killProcessFailed);
+    } finally {
+      setKilling(false);
+    }
+  };
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Cpu className="size-4 text-primary" />
-          {t.processes}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="mb-2 grid grid-cols-[minmax(0,1fr)_4.5rem_5.5rem] gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-          <span>{t.processName}</span>
-          <span className="text-right">{t.cpu}</span>
-          <span className="text-right">{t.ram}</span>
-        </div>
-        <div className="space-y-1.5">
-          {processes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t.loading}</p>
-          ) : (
-            processes.map((proc) => (
-              <div
-                key={proc.pid}
-                className="grid grid-cols-[minmax(0,1fr)_4.5rem_5.5rem] gap-2 rounded-md px-1 py-1 text-xs hover:bg-muted/40"
-              >
-                <span className="truncate" title={`${proc.name} (#${proc.pid})`}>
-                  {proc.name || `PID ${proc.pid}`}
-                </span>
-                <span className="text-right font-mono tabular-nums">
-                  {formatPercent(proc.cpu_usage, tag)}
-                </span>
-                <span className="text-right font-mono tabular-nums">
-                  {formatBytes(proc.memory, tag)}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Cpu className="size-4 text-primary" />
+            {t.processes}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-2 grid grid-cols-[minmax(0,1fr)_4.5rem_5.5rem_2rem] gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+            <span>{t.processName}</span>
+            <span className="text-right">{t.cpu}</span>
+            <span className="text-right">{t.ram}</span>
+            <span />
+          </div>
+          <div className="space-y-1.5">
+            {processes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t.loading}</p>
+            ) : (
+              processes.map((proc) => (
+                <div
+                  key={proc.pid}
+                  className="grid grid-cols-[minmax(0,1fr)_4.5rem_5.5rem_2rem] items-center gap-2 rounded-md px-1 py-1 text-xs hover:bg-muted/40"
+                >
+                  <span className="truncate" title={`${proc.name} (#${proc.pid})`}>
+                    {proc.name || `PID ${proc.pid}`}
+                  </span>
+                  <span className="text-right font-mono tabular-nums">
+                    {formatPercent(proc.cpu_usage, tag)}
+                  </span>
+                  <span className="text-right font-mono tabular-nums">
+                    {formatBytes(proc.memory, tag)}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 text-destructive hover:text-destructive"
+                    title={t.killProcess}
+                    onClick={() =>
+                      setPendingKill({
+                        pid: proc.pid,
+                        name: proc.name || `PID ${proc.pid}`,
+                      })
+                    }
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={pendingKill != null}
+        onOpenChange={(open) => {
+          if (!open && !killing) setPendingKill(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t.killProcessConfirm
+                .replace("{name}", pendingKill?.name ?? "")
+                .replace("{pid}", String(pendingKill?.pid ?? ""))}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={killing}>{t.cancel}</AlertDialogCancel>
+            <AlertDialogAction disabled={killing} onClick={() => void confirmKill()}>
+              {t.killProcess}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

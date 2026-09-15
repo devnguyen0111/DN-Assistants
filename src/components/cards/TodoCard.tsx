@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckSquare, Plus, Trash2 } from "lucide-react";
+import { CheckSquare, Link2Off, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,17 @@ import {
   deleteTodo,
   listTodos,
   toggleTodo,
+  updateTodo,
   type Todo,
   type TodoPriority,
+  type TodoRepeat,
 } from "@/lib/todos";
+import {
+  createEvent,
+  listEvents,
+  listUpcoming,
+  type CalendarEvent,
+} from "@/lib/events";
 import { cn } from "@/lib/utils";
 
 const PRIORITY_ORDER: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 };
@@ -38,10 +46,12 @@ export function TodoCard() {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState("");
   const [newPriority, setNewPriority] = useState<TodoPriority>("medium");
   const [newDue, setNewDue] = useState("");
+  const [newRepeat, setNewRepeat] = useState<TodoRepeat>("none");
   const [filter, setFilter] = useState<"active" | "completed">("active");
 
   const refresh = async () => {
@@ -55,15 +65,40 @@ export function TodoCard() {
     }
   };
 
+  const refreshEvents = async () => {
+    try {
+      const upcoming = await listUpcoming(40);
+      const all = upcoming.length > 0 ? upcoming : await listEvents();
+      setEvents(all);
+    } catch {
+      setEvents([]);
+    }
+  };
+
   useEffect(() => {
     void refresh();
-    const onChanged = () => void refresh();
-    window.addEventListener("dn-todos-changed", onChanged);
-    return () => window.removeEventListener("dn-todos-changed", onChanged);
+    void refreshEvents();
+    const onTodos = () => void refresh();
+    const onEvents = () => void refreshEvents();
+    window.addEventListener("dn-todos-changed", onTodos);
+    window.addEventListener("dn-events-changed", onEvents);
+    return () => {
+      window.removeEventListener("dn-todos-changed", onTodos);
+      window.removeEventListener("dn-events-changed", onEvents);
+    };
   }, []);
+
+  const eventById = useMemo(() => {
+    const map = new Map<string, CalendarEvent>();
+    for (const event of events) map.set(String(event.id), event);
+    return map;
+  }, [events]);
 
   const priorityLabel = (p: TodoPriority) =>
     p === "high" ? t.todoPriorityHigh : p === "medium" ? t.todoPriorityMedium : t.todoPriorityLow;
+
+  const repeatLabel = (r: TodoRepeat) =>
+    r === "daily" ? t.repeatDaily : r === "weekly" ? t.repeatWeekly : t.repeatNone;
 
   const filtered = useMemo(
     () =>
@@ -80,9 +115,11 @@ export function TodoCard() {
         title: newTitle.trim(),
         priority: newPriority,
         due_at: newDue ? new Date(newDue).toISOString() : null,
+        repeat: newRepeat,
       });
       setNewTitle("");
       setNewDue("");
+      setNewRepeat("none");
       toast.success(t.saved);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -106,6 +143,53 @@ export function TodoCard() {
     }
   };
 
+  const linkEvent = async (todo: Todo, eventId: string) => {
+    try {
+      await updateTodo(todo.id, { event_id: eventId === "none" ? null : eventId });
+      toast.success(t.saved);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const unlinkEvent = async (todo: Todo) => {
+    try {
+      await updateTodo(todo.id, { event_id: null });
+      toast.success(t.saved);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const createFromDue = async (todo: Todo) => {
+    if (!todo.due_at) return;
+    try {
+      const start = new Date(todo.due_at).getTime();
+      const id = await createEvent({
+        title: todo.title,
+        start_at: start,
+        end_at: start + 60 * 60 * 1000,
+        all_day: false,
+        remind_minutes: 0,
+        repeat: todo.repeat === "daily" || todo.repeat === "weekly" ? todo.repeat : "none",
+      });
+      await updateTodo(todo.id, { event_id: String(id) });
+      window.dispatchEvent(new Event("dn-events-changed"));
+      await refreshEvents();
+      toast.success(t.saved);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const setRepeat = async (todo: Todo, repeat: TodoRepeat) => {
+    try {
+      await updateTodo(todo.id, { repeat });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -115,7 +199,7 @@ export function TodoCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]">
+        <div className="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_8rem_auto]">
           <Input
             placeholder={t.todoAdd}
             value={newTitle}
@@ -139,6 +223,16 @@ export function TodoCard() {
             value={newDue}
             onChange={(e) => setNewDue(e.target.value)}
           />
+          <Select value={newRepeat} onValueChange={(v) => setNewRepeat(v as TodoRepeat)}>
+            <SelectTrigger>
+              <SelectValue placeholder={t.repeat} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t.repeatNone}</SelectItem>
+              <SelectItem value="daily">{t.repeatDaily}</SelectItem>
+              <SelectItem value="weekly">{t.repeatWeekly}</SelectItem>
+            </SelectContent>
+          </Select>
           <Button onClick={() => void add()}>
             <Plus className="size-4" />
             {t.todoAdd}
@@ -169,50 +263,113 @@ export function TodoCard() {
             <EmptyState title={t.todoEmpty} />
           ) : (
             <div className="space-y-1.5">
-              {filtered.map((todo) => (
-                <div
-                  key={todo.id}
-                  className="flex items-start gap-2 rounded-lg border border-border/60 px-3 py-2"
-                >
-                  <Checkbox
-                    checked={todo.done === 1}
-                    onCheckedChange={() => void toggle(todo)}
-                    className="mt-0.5"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={cn(
-                        "truncate text-sm font-medium",
-                        todo.done === 1 && "text-muted-foreground line-through",
-                      )}
-                    >
-                      {todo.title}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <Badge className={PRIORITY_BADGE[todo.priority]}>
-                        {priorityLabel(todo.priority)}
-                      </Badge>
-                      {todo.due_at && (
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          {t.todoDue}:{" "}
-                          {new Intl.DateTimeFormat(tag, {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          }).format(new Date(todo.due_at))}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-7 shrink-0"
-                    onClick={() => void remove(todo.id)}
+              {filtered.map((todo) => {
+                const linked = todo.event_id ? eventById.get(todo.event_id) : undefined;
+                return (
+                  <div
+                    key={todo.id}
+                    className="flex items-start gap-2 rounded-lg border border-border/60 px-3 py-2"
                   >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              ))}
+                    <Checkbox
+                      checked={todo.done === 1}
+                      onCheckedChange={() => void toggle(todo)}
+                      className="mt-0.5"
+                    />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <p
+                        className={cn(
+                          "truncate text-sm font-medium",
+                          todo.done === 1 && "text-muted-foreground line-through",
+                        )}
+                      >
+                        {todo.title}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge className={PRIORITY_BADGE[todo.priority]}>
+                          {priorityLabel(todo.priority)}
+                        </Badge>
+                        {todo.repeat && todo.repeat !== "none" && (
+                          <Badge variant="secondary">{repeatLabel(todo.repeat)}</Badge>
+                        )}
+                        {todo.due_at && (
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {t.todoDue}:{" "}
+                            {new Intl.DateTimeFormat(tag, {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            }).format(new Date(todo.due_at))}
+                          </span>
+                        )}
+                        {linked && (
+                          <Badge variant="outline" className="max-w-[10rem] truncate">
+                            {linked.title}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Select
+                          value={todo.event_id ?? "none"}
+                          onValueChange={(v) => void linkEvent(todo, v)}
+                        >
+                          <SelectTrigger className="h-7 w-[11rem] text-xs">
+                            <SelectValue placeholder={t.linkEvent} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t.linkEvent}</SelectItem>
+                            {events.map((event) => (
+                              <SelectItem key={event.id} value={String(event.id)}>
+                                {event.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={todo.repeat ?? "none"}
+                          onValueChange={(v) => void setRepeat(todo, v as TodoRepeat)}
+                        >
+                          <SelectTrigger className="h-7 w-[8rem] text-xs">
+                            <SelectValue placeholder={t.repeat} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t.repeatNone}</SelectItem>
+                            <SelectItem value="daily">{t.repeatDaily}</SelectItem>
+                            <SelectItem value="weekly">{t.repeatWeekly}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {todo.event_id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => void unlinkEvent(todo)}
+                          >
+                            <Link2Off className="size-3.5" />
+                            {t.unlinkEvent}
+                          </Button>
+                        )}
+                        {todo.due_at && !todo.event_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => void createFromDue(todo)}
+                          >
+                            {t.createEventFromDue}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-7 shrink-0"
+                      onClick={() => void remove(todo.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </ScrollArea>

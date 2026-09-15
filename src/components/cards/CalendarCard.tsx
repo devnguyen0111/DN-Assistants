@@ -32,7 +32,9 @@ import {
   startOfDay,
   updateEvent,
   type CalendarEvent,
+  type EventRepeat,
 } from "@/lib/events";
+import { exportEventsToIcs, parseIcs } from "@/lib/ics";
 import { isSoundMuted, setSoundMuted } from "@/lib/notify";
 import { cn, formatTimeHm } from "@/lib/utils";
 
@@ -78,6 +80,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   const [endValue, setEndValue] = useState("");
   const [color, setColor] = useState(EVENT_COLORS[0]);
   const [remindMinutes, setRemindMinutes] = useState(0);
+  const [repeat, setRepeat] = useState<EventRepeat>("none");
   const [muted, setMuted] = useState(() => isSoundMuted());
   const gridRef = useRef<HTMLDivElement>(null);
   const scope = useRef<ReturnType<typeof createScope> | null>(null);
@@ -104,6 +107,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
     setAllDay(event.all_day === 1);
     setColor(event.color ?? EVENT_COLORS[0]);
     setRemindMinutes(event.remind_minutes ?? 0);
+    setRepeat(event.repeat ?? "none");
     setStartValue(toLocalInputValue(event.start_at));
     setEndValue(toLocalInputValue(event.end_at ?? event.start_at + 60 * 60 * 1000));
     setOpen(true);
@@ -188,11 +192,49 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
     setAllDay(false);
     setColor(EVENT_COLORS[0]);
     setRemindMinutes(0);
+    setRepeat("none");
     const start = new Date(date);
     start.setHours(9, 0, 0, 0);
     setStartValue(toLocalInputValue(start.getTime()));
     setEndValue(toLocalInputValue(start.getTime() + 60 * 60 * 1000));
     setOpen(true);
+  };
+
+  const exportIcs = async () => {
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+      const path = await save({
+        defaultPath: "dn-assistant-calendar.ics",
+        filters: [{ name: "ICS", extensions: ["ics"] }],
+      });
+      if (!path) return;
+      await writeTextFile(path, exportEventsToIcs(events));
+      toast.success(t.icsSuccess);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const importIcs = async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      const path = await open({
+        multiple: false,
+        filters: [{ name: "ICS", extensions: ["ics", "ical"] }],
+      });
+      if (!path || typeof path !== "string") return;
+      const text = await readTextFile(path);
+      const parsed = parseIcs(text);
+      for (const input of parsed) {
+        await createEvent(input);
+      }
+      await refresh();
+      toast.success(t.icsSuccess);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
   };
 
   const goToday = () => {
@@ -233,6 +275,8 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
       all_day: allDay,
       color,
       remind_minutes: remindMinutes,
+      repeat,
+      repeat_until: editing?.repeat_until ?? null,
     };
     try {
       if (editing) await updateEvent(editing.id, payload);
@@ -301,6 +345,12 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
               >
                 <Plus className="size-4" />
                 {t.addEvent}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => void exportIcs()}>
+                {t.icsExport}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => void importIcs()}>
+                {t.icsImport}
               </Button>
             </div>
           </CardHeader>
@@ -519,6 +569,19 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
                       {remindLabel(n)}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">{t.repeat}</label>
+              <Select value={repeat} onValueChange={(v) => setRepeat(v as EventRepeat)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t.repeatNone}</SelectItem>
+                  <SelectItem value="daily">{t.repeatDaily}</SelectItem>
+                  <SelectItem value="weekly">{t.repeatWeekly}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

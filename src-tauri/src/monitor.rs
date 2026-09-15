@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use sysinfo::{Disks, Networks, ProcessRefreshKind, ProcessesToUpdate, System};
+use sysinfo::{Disks, Networks, Pid, ProcessRefreshKind, ProcessesToUpdate, System};
 use tauri::{AppHandle, Emitter, Manager};
 
 /// Global switch to pause the background metrics emitter loop (e.g. while
@@ -301,6 +301,29 @@ impl Monitor {
 pub fn get_system_stats(state: tauri::State<'_, Mutex<Monitor>>) -> Result<SystemStats, String> {
     let mut monitor = state.lock().map_err(|e| e.to_string())?;
     Ok(monitor.snapshot())
+}
+
+/// Terminates the process with the given PID via sysinfo.
+#[tauri::command]
+pub fn kill_process(pid: u32) -> Result<(), String> {
+    let mut sys = System::new();
+    let target = Pid::from_u32(pid);
+    sys.refresh_processes_specifics(
+        ProcessesToUpdate::Some(&[target]),
+        true,
+        ProcessRefreshKind::nothing(),
+    );
+
+    match sys.process(target) {
+        Some(process) => {
+            if process.kill() {
+                Ok(())
+            } else {
+                Err(format!("Failed to kill process {pid}"))
+            }
+        }
+        None => Err(format!("Process {pid} not found")),
+    }
 }
 
 fn format_tooltip(stats: &SystemStats) -> String {

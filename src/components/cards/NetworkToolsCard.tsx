@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Globe, Network, Wifi } from "lucide-react";
+import { Gauge, Globe, Network, Search, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ type PingResult = {
   output: string;
 };
 
+const SPEED_TEST_URL = "https://speed.cloudflare.com/__down?bytes=5000000";
+
 export function NetworkToolsCard() {
   const { t } = useI18n();
   const [publicIp, setPublicIp] = useState<string | null>(null);
@@ -34,6 +36,13 @@ export function NetworkToolsCard() {
   const [portHost, setPortHost] = useState("1.1.1.1");
   const [portResult, setPortResult] = useState<boolean | null>(null);
   const [checkingPort, setCheckingPort] = useState(false);
+
+  const [dnsHost, setDnsHost] = useState("example.com");
+  const [dnsResults, setDnsResults] = useState<string[] | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+
+  const [speedMbps, setSpeedMbps] = useState<number | null>(null);
+  const [speedTesting, setSpeedTesting] = useState(false);
 
   const [stats, setStats] = useState<SystemStats | null>(null);
 
@@ -92,6 +101,41 @@ export function NetworkToolsCard() {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setCheckingPort(false);
+    }
+  };
+
+  const runDnsLookup = async () => {
+    if (!dnsHost.trim()) return;
+    setLookingUp(true);
+    setDnsResults(null);
+    try {
+      const ips = await safeInvoke<string[]>("dns_lookup", { host: dnsHost.trim() });
+      setDnsResults(ips);
+    } catch (err) {
+      setDnsResults(null);
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
+  const runSpeedTest = async () => {
+    setSpeedTesting(true);
+    setSpeedMbps(null);
+    try {
+      const { fetch } = await import("@tauri-apps/plugin-http");
+      const start = performance.now();
+      const response = await fetch(SPEED_TEST_URL);
+      const buffer = await response.arrayBuffer();
+      const seconds = (performance.now() - start) / 1000;
+      if (seconds <= 0) throw new Error("Speed test timed out");
+      const mbps = (buffer.byteLength * 8) / (seconds * 1_000_000);
+      setSpeedMbps(mbps);
+    } catch (err) {
+      setSpeedMbps(null);
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSpeedTesting(false);
     }
   };
 
@@ -198,6 +242,58 @@ export function NetworkToolsCard() {
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="size-4 text-primary" />
+            {t.dnsLookup}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              placeholder={t.dnsHost}
+              value={dnsHost}
+              onChange={(e) => setDnsHost(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void runDnsLookup()}
+            />
+            <Button size="sm" onClick={() => void runDnsLookup()} disabled={lookingUp}>
+              {t.dnsLookup}
+            </Button>
+          </div>
+          {dnsResults && (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">{t.dnsResult}</p>
+              <ul className="space-y-0.5 font-mono text-sm tabular-nums">
+                {dnsResults.map((ip) => (
+                  <li key={ip}>{ip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gauge className="size-4 text-primary" />
+            {t.speedTest}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">{t.speedTestHint}</p>
+          <Button size="sm" onClick={() => void runSpeedTest()} disabled={speedTesting}>
+            {speedTesting ? t.loading : t.speedTestRun}
+          </Button>
+          {speedMbps != null && (
+            <p className="font-mono text-lg font-semibold tabular-nums">
+              {t.speedTestResult.replace("{n}", speedMbps.toFixed(1))}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

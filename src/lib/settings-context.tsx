@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  applyDesktopWindowPrefs,
   DEFAULT_SETTINGS,
   loadSettings,
   loadSettingsSync,
@@ -45,6 +46,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       } catch {
         // browser preview
       }
+      await applyDesktopWindowPrefs(loaded);
       setReady(true);
     })();
     return () => {

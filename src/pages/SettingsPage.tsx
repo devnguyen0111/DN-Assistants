@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,10 +13,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
 import { useTheme, type ThemeMode } from "@/lib/theme";
 import { useSettings } from "@/lib/settings-context";
-import { ACCENT_OPTIONS, type AccentColor, type Density } from "@/lib/settings";
+import {
+  ACCENT_OPTIONS,
+  DEFAULT_SETTINGS,
+  type AccentColor,
+  type Density,
+} from "@/lib/settings";
 import { PRIMARY_IANA, POPULAR_IANA, getZoneById, zoneLabel } from "@/lib/timezones";
 import { clearClipboardHistory } from "@/lib/clipboard-history";
 import {
@@ -33,6 +46,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import type { CalendarEvent } from "@/lib/events";
+import type { Note } from "@/lib/notes";
+import type { Todo } from "@/lib/todos";
 
 export function SettingsPage() {
   const { t, locale, setLocale } = useI18n();
@@ -41,6 +57,10 @@ export function SettingsPage() {
   const [autostart, setAutostart] = useState(false);
   const [autostartReady, setAutostartReady] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [importConfirmOpen, setImportConfirmOpen] = useState(false);
+  const [pendingImportPath, setPendingImportPath] = useState<string | null>(null);
+  const [backupOpen, setBackupOpen] = useState<"export" | "restore" | null>(null);
+  const [backupPassword, setBackupPassword] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +81,18 @@ export function SettingsPage() {
   }, []);
 
   const timezoneOptions = Array.from(new Set([PRIMARY_IANA, ...POPULAR_IANA]));
+
+  const accentLabel = (a: AccentColor) => {
+    const map: Record<AccentColor, string> = {
+      teal: t.accentTeal,
+      blue: t.accentBlue,
+      violet: t.accentViolet,
+      rose: t.accentRose,
+      amber: t.accentAmber,
+      emerald: t.accentEmerald,
+    };
+    return map[a] ?? a;
+  };
 
   const checkUpdates = async () => {
     setUpdateStatus(null);
@@ -111,25 +143,88 @@ export function SettingsPage() {
     }
   };
 
-  const importData = async () => {
+  const pickImportFile = async () => {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
-      const { readTextFile } = await import("@tauri-apps/plugin-fs");
       const path = await open({
         multiple: false,
         filters: [{ name: "JSON", extensions: ["json"] }],
       });
       if (!path || typeof path !== "string") return;
-      if (!window.confirm(t.importConfirm)) return;
-      const raw = await readTextFile(path);
+      setPendingImportPath(path);
+      setImportConfirmOpen(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const runImport = async () => {
+    if (!pendingImportPath) return;
+    setImportConfirmOpen(false);
+    try {
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      const { upsertEventFromImport } = await import("@/lib/events");
+      const { upsertNote } = await import("@/lib/notes");
+      const { upsertTodo } = await import("@/lib/todos");
+      const raw = await readTextFile(pendingImportPath);
       const data = JSON.parse(raw) as {
         settings?: Partial<typeof settings>;
-        events?: unknown[];
-        notes?: unknown[];
-        todos?: unknown[];
+        events?: CalendarEvent[];
+        notes?: Note[];
+        todos?: Todo[];
       };
+
       if (data.settings) await updateSettings(data.settings);
-      toast.success(t.importSuccess);
+
+      let events = 0;
+      let notes = 0;
+      let todos = 0;
+
+      for (const event of data.events ?? []) {
+        await upsertEventFromImport(event);
+        events += 1;
+      }
+      for (const note of data.notes ?? []) {
+        await upsertNote(note);
+        notes += 1;
+      }
+      for (const todo of data.todos ?? []) {
+        await upsertTodo(todo);
+        todos += 1;
+      }
+
+      window.dispatchEvent(new Event("dn-events-changed"));
+      window.dispatchEvent(new Event("dn-notes-changed"));
+      window.dispatchEvent(new Event("dn-todos-changed"));
+
+      toast.success(
+        t.importResult
+          .replace("{events}", String(events))
+          .replace("{notes}", String(notes))
+          .replace("{todos}", String(todos)),
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingImportPath(null);
+    }
+  };
+
+  const runEncryptedBackup = async () => {
+    const mode = backupOpen;
+    setBackupOpen(null);
+    const password = backupPassword;
+    setBackupPassword("");
+    if (!mode || !password.trim()) return;
+    try {
+      const { exportEncryptedBackup, restoreEncryptedBackup } = await import("@/lib/backup");
+      if (mode === "export") {
+        await exportEncryptedBackup(password);
+        toast.success(t.backupSuccess);
+      } else {
+        await restoreEncryptedBackup(password);
+        toast.success(t.backupRestoreSuccess);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
@@ -174,7 +269,7 @@ export function SettingsPage() {
               <SelectContent>
                 {ACCENT_OPTIONS.map((a) => (
                   <SelectItem key={a} value={a}>
-                    {a}
+                    {accentLabel(a)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -247,6 +342,38 @@ export function SettingsPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="morning-brief">{t.morningBrief}</Label>
+              <p className="text-xs text-muted-foreground">{t.morningBriefHint}</p>
+            </div>
+            <Switch
+              id="morning-brief"
+              checked={settings.morningBriefEnabled}
+              onCheckedChange={(v) => void updateSettings({ morningBriefEnabled: v })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="hibp-check">{t.vaultHibpCheck}</Label>
+              <p className="text-xs text-muted-foreground">{t.vaultHibpHint}</p>
+            </div>
+            <Switch
+              id="hibp-check"
+              checked={settings.hibpCheckEnabled}
+              onCheckedChange={(v) => void updateSettings({ hibpCheckEnabled: v })}
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void updateSettings({ onboardingDone: false })}
+          >
+            {t.aboutReplayOnboarding}
+          </Button>
         </CardContent>
       </Card>
 
@@ -265,6 +392,18 @@ export function SettingsPage() {
               id="close-to-tray"
               checked={settings.closeToTray}
               onCheckedChange={(v) => void updateSettings({ closeToTray: v })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="always-on-top">{t.alwaysOnTop}</Label>
+              <p className="text-xs text-muted-foreground">{t.alwaysOnTopHint}</p>
+            </div>
+            <Switch
+              id="always-on-top"
+              checked={settings.alwaysOnTop}
+              onCheckedChange={(v) => void updateSettings({ alwaysOnTop: v })}
             />
           </div>
 
@@ -299,10 +438,56 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>{t.settingsHotkeys}</CardTitle>
+          <CardDescription>{t.settingsHotkeysDesc}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="hotkey-toggle">{t.hotkeyToggleLabel}</Label>
+            <Input
+              id="hotkey-toggle"
+              value={settings.hotkeyToggleWindow}
+              onChange={(e) => void updateSettings({ hotkeyToggleWindow: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="hotkey-clipboard">{t.hotkeyClipboardLabel}</Label>
+            <Input
+              id="hotkey-clipboard"
+              value={settings.hotkeyClipboard}
+              onChange={(e) => void updateSettings({ hotkeyClipboard: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="hotkey-scratch">{t.hotkeyScratchpadLabel}</Label>
+            <Input
+              id="hotkey-scratch"
+              value={settings.hotkeyScratchpad}
+              onChange={(e) => void updateSettings({ hotkeyScratchpad: e.target.value })}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              void updateSettings({
+                hotkeyToggleWindow: DEFAULT_SETTINGS.hotkeyToggleWindow,
+                hotkeyClipboard: DEFAULT_SETTINGS.hotkeyClipboard,
+                hotkeyScratchpad: DEFAULT_SETTINGS.hotkeyScratchpad,
+              })
+            }
+          >
+            {t.hotkeyReset}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>{t.settingsReminders}</CardTitle>
           <CardDescription>{t.settingsRemindersDesc}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-5">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5">
               <Label htmlFor="sound-muted">{t.muteReminders}</Label>
@@ -312,6 +497,23 @@ export function SettingsPage() {
               id="sound-muted"
               checked={settings.soundMuted}
               onCheckedChange={(v) => void updateSettings({ soundMuted: v })}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="vault-autolock">{t.vaultAutoLock}</Label>
+            <p className="text-xs text-muted-foreground">{t.vaultAutoLockHint}</p>
+            <Input
+              id="vault-autolock"
+              type="number"
+              min={0}
+              className="w-32"
+              value={settings.vaultAutoLockMinutes}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!Number.isFinite(n) || n < 0) return;
+                void updateSettings({ vaultAutoLockMinutes: Math.floor(n) });
+              }}
             />
           </div>
         </CardContent>
@@ -393,8 +595,40 @@ export function SettingsPage() {
             <Button variant="outline" size="sm" onClick={() => void exportData()}>
               {t.exportData}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => void importData()}>
+            <Button variant="outline" size="sm" onClick={() => void pickImportFile()}>
               {t.importData}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setBackupPassword("");
+                setBackupOpen("export");
+              }}
+            >
+              {t.exportEncrypted}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setBackupPassword("");
+                setBackupOpen("restore");
+              }}
+            >
+              {t.importEncrypted}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void import("@/lib/diagnostics")
+                  .then(({ exportDiagnostics }) => exportDiagnostics())
+                  .then(() => toast.success(t.diagnosticsSuccess))
+                  .catch((e) => toast.error(String(e)));
+              }}
+            >
+              {t.diagnosticsExport}
             </Button>
           </div>
         </CardContent>
@@ -412,6 +646,70 @@ export function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={importConfirmOpen} onOpenChange={setImportConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.importData}</AlertDialogTitle>
+            <AlertDialogDescription>{t.importConfirm}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingImportPath(null);
+              }}
+            >
+              {t.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => void runImport()}>{t.importData}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog
+        open={backupOpen !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBackupOpen(null);
+            setBackupPassword("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {backupOpen === "restore" ? t.importEncrypted : t.exportEncrypted}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="backup-password">{t.backupPassword}</Label>
+            <p className="text-xs text-muted-foreground">{t.backupPasswordHint}</p>
+            <Input
+              id="backup-password"
+              type="password"
+              value={backupPassword}
+              onChange={(e) => setBackupPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void runEncryptedBackup();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBackupOpen(null);
+                setBackupPassword("");
+              }}
+            >
+              {t.cancel}
+            </Button>
+            <Button disabled={!backupPassword.trim()} onClick={() => void runEncryptedBackup()}>
+              {backupOpen === "restore" ? t.importEncrypted : t.exportEncrypted}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

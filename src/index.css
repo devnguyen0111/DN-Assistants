@@ -139,9 +139,30 @@ html.dark[data-accent="emerald"] {
 
 html[data-density="compact"] {
   --radius: 0.5rem;
+  --density-pad: 0.75rem;
+  --density-gap: 0.5rem;
+  --density-control-h: 2rem;
 }
 html[data-density="comfortable"] {
   --radius: 0.75rem;
+  --density-pad: 1rem;
+  --density-gap: 0.75rem;
+  --density-control-h: 2.5rem;
+}
+
+html[data-density="compact"] [data-slot="card-header"],
+html[data-density="compact"] .density-pad {
+  padding: var(--density-pad);
+}
+html[data-density="compact"] [data-slot="card-content"] {
+  padding: var(--density-pad);
+  padding-top: 0;
+}
+html[data-density="compact"] aside nav button {
+  height: var(--density-control-h);
+}
+html[data-density="compact"] .space-y-4 {
+  gap: var(--density-gap);
 }
 
 @media (prefers-reduced-motion: reduce) {

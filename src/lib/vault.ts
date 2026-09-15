@@ -14,6 +14,7 @@ export type VaultEntryPayload = {
   username: string;
   password: string;
   note: string;
+  totpSecret?: string;
 };
 
 export type VaultEntry = VaultEntryPayload & {
@@ -157,6 +158,7 @@ async function decryptRow(key: CryptoKey, row: VaultRow): Promise<VaultEntry> {
     username: payload.username ?? "",
     password: payload.password ?? "",
     note: payload.note ?? "",
+    totpSecret: payload.totpSecret ?? "",
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -211,11 +213,13 @@ export async function createVaultEntry(
     username: input.username.trim(),
     password: input.password,
     note: input.note.trim(),
+    totpSecret: (input.totpSecret ?? "").trim().replace(/\s+/g, ""),
   };
   const { nonce, ciphertext } = await encryptString(key, JSON.stringify(payload));
   const entry: VaultEntry = {
     id: newId(),
     ...payload,
+    totpSecret: payload.totpSecret ?? "",
     created_at: now,
     updated_at: now,
   };
@@ -242,6 +246,7 @@ export async function updateVaultEntry(
     username: input.username.trim(),
     password: input.password,
     note: input.note.trim(),
+    totpSecret: (input.totpSecret ?? "").trim().replace(/\s+/g, ""),
   };
   const { nonce, ciphertext } = await encryptString(key, JSON.stringify(payload));
   await db.execute(

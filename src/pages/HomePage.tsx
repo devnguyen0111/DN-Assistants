@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, CheckSquare, Clock3, Cpu, Flame, MemoryStick, NotebookPen } from "lucide-react";
+import {
+  CalendarClock,
+  CheckSquare,
+  ClipboardList,
+  Clock3,
+  Cpu,
+  Flame,
+  MemoryStick,
+  NotebookPen,
+  Timer,
+} from "lucide-react";
 import { BentoGrid, BentoItem } from "@/components/bento/BentoGrid";
 import { WeatherCard } from "@/components/cards/WeatherCard";
 import { Badge } from "@/components/ui/badge";
@@ -7,25 +17,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/state-block";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { useSystemStats } from "@/hooks/useSystemStats";
 import { formatEventRange, listUpcoming, type CalendarEvent } from "@/lib/events";
-import { listNotes, type Note } from "@/lib/notes";
+import { createNote, listNotes, type Note } from "@/lib/notes";
 import { listTodos, type Todo } from "@/lib/todos";
 import { isDoneToday, listTikTokStreaks, type TikTokStreak } from "@/lib/tiktok-streaks";
 import { localeTag, useI18n } from "@/lib/i18n";
+import { navLabel } from "@/lib/page-meta";
 import { useSettings } from "@/lib/settings-context";
 import { pad2, formatPercent, formatBytes } from "@/lib/utils";
 import { zonedParts } from "@/lib/timezones";
 import type { AppRoute } from "@/lib/routing";
+import { toast } from "sonner";
 
 type Props = {
   onNavigate: (route: AppRoute) => void;
 };
 
+function greetingKey(hour: number): "greetingMorning" | "greetingAfternoon" | "greetingEvening" {
+  if (hour < 12) return "greetingMorning";
+  if (hour < 18) return "greetingAfternoon";
+  return "greetingEvening";
+}
+
 export function HomePage({ onNavigate }: Props) {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const [now, setNow] = useState(() => new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -69,14 +88,107 @@ export function HomePage({ onNavigate }: Props) {
       ? (stats.memory.used / stats.memory.total) * 100
       : 0;
 
+  const greet = t[greetingKey(Number(primary.hours))];
+
+  const saveScratch = async () => {
+    const body = settings.scratchpad.trim();
+    if (!body) return;
+    try {
+      await createNote({
+        title: body.split("\n")[0]?.slice(0, 60) || t.homeScratchpad,
+        body,
+      });
+      await updateSettings({ scratchpad: "" });
+      toast.success(t.saved);
+      onNavigate("notes");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">{t.homeWelcome}</h2>
-        <p className="text-sm text-muted-foreground">{t.homeWelcomeDesc}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="max-w-2xl">
+          <h2 className="text-lg font-semibold tracking-tight">
+            {greet} · {t.homeWelcome}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t.homeIntro}</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => onNavigate("about")}>
+          {t.homeLearnMore}
+        </Button>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <span className="self-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {t.homeQuickActions}
+        </span>
+        <Button size="sm" variant="secondary" onClick={() => onNavigate("notes")}>
+          <NotebookPen className="size-3.5" />
+          {t.homeNewNote}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => onNavigate("todo")}>
+          <CheckSquare className="size-3.5" />
+          {t.homeOpenTodo}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => onNavigate("clipboard")}>
+          <ClipboardList className="size-3.5" />
+          {t.homeOpenClipboard}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => onNavigate("focus")}>
+          <Timer className="size-3.5" />
+          {t.homeOpenFocus}
+        </Button>
+      </div>
+
+      {settings.favoriteRoutes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {t.homeFavorites}
+          </span>
+          {settings.favoriteRoutes.map((r) => (
+            <Button key={r} size="sm" variant="outline" onClick={() => onNavigate(r)}>
+              {navLabel(t, r)}
+            </Button>
+          ))}
+        </div>
+      )}
+
       <BentoGrid className="xl:grid-cols-2">
+        <BentoItem>
+          <Card className="h-full">
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="flex items-center gap-2">
+                <NotebookPen className="size-4 text-primary" />
+                {t.homeScratchpad}
+              </CardTitle>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" onClick={() => void saveScratch()}>
+                  {t.homeScratchpadSave}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void updateSettings({ scratchpad: "" })}
+                >
+                  {t.homeScratchpadClear}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-2 text-xs text-muted-foreground">{t.homeScratchpadHint}</p>
+              <Textarea
+                id="dn-scratchpad"
+                value={settings.scratchpad}
+                onChange={(e) => void updateSettings({ scratchpad: e.target.value })}
+                placeholder={t.noteBodyPlaceholder}
+                className="min-h-24"
+              />
+            </CardContent>
+          </Card>
+        </BentoItem>
+
         <BentoItem>
           <Card
             className="h-full cursor-pointer transition-colors hover:bg-accent/30"
@@ -218,15 +330,22 @@ export function HomePage({ onNavigate }: Props) {
                 <CheckSquare className="size-4 text-primary" />
                 {t.homeTodos}
               </CardTitle>
+              <Badge variant="secondary">{todos.length}</Badge>
             </CardHeader>
             <CardContent className="space-y-1.5">
               {todos.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t.todoEmpty}</p>
               ) : (
                 todos.map((todo) => (
-                  <p key={todo.id} className="truncate text-sm">
-                    {todo.title}
-                  </p>
+                  <div key={todo.id} className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm">{todo.title}</p>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 text-[10px] capitalize"
+                    >
+                      {todo.priority}
+                    </Badge>
+                  </div>
                 ))
               )}
             </CardContent>

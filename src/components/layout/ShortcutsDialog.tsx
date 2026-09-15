@@ -6,7 +6,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
+import { navLabel } from "@/lib/page-meta";
 import { SHORTCUT_ROUTES } from "@/lib/routing";
+import { useSettings } from "@/lib/settings-context";
 
 type Props = {
   open: boolean;
@@ -22,8 +24,15 @@ function Row({ keys, label }: { keys: string; label: string }) {
   );
 }
 
+function displayHotkey(accel: string): string {
+  return accel
+    .replace(/CommandOrControl/g, "Ctrl")
+    .replace(/\+/g, "+");
+}
+
 export function ShortcutsDialog({ open, onOpenChange }: Props) {
   const { t } = useI18n();
+  const { settings } = useSettings();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,17 +41,27 @@ export function ShortcutsDialog({ open, onOpenChange }: Props) {
           <DialogTitle>{t.shortcuts}</DialogTitle>
           <DialogDescription>{t.shortcutsHint}</DialogDescription>
         </DialogHeader>
-        <div className="divide-y">
+        <div className="max-h-[60vh] divide-y overflow-y-auto">
           <Row keys="Ctrl+K" label={t.shortcutPalette} />
           <Row keys="Ctrl+," label={t.shortcutSettings} />
           <Row keys="?" label={t.shortcutShortcuts} />
-          <Row keys="Ctrl+Shift+Space" label={t.shortcutToggleWindow} />
-          <Row keys="Ctrl+Shift+V" label={t.shortcutClipboard} />
+          <Row
+            keys={displayHotkey(settings.hotkeyToggleWindow)}
+            label={t.shortcutToggleWindow}
+          />
+          <Row
+            keys={displayHotkey(settings.hotkeyClipboard)}
+            label={t.shortcutClipboard}
+          />
+          <Row
+            keys={displayHotkey(settings.hotkeyScratchpad)}
+            label={t.hotkeyScratchpadLabel}
+          />
           {SHORTCUT_ROUTES.map((route, i) => (
             <Row
               key={route}
               keys={`Alt+${i + 1}`}
-              label={`${t.shortcutNavigate}: ${route}`}
+              label={`${t.shortcutNavigate}: ${navLabel(t, route)}`}
             />
           ))}
         </div>

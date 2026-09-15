@@ -3,14 +3,14 @@ mod monitor;
 mod network_cmds;
 
 use clipboard_watch::{is_clipboard_watching, set_clipboard_watching, start_clipboard_watcher};
-use monitor::{get_system_stats, set_metrics_paused, start_metrics_emitter, Monitor};
-use network_cmds::{check_port, get_public_ip, ping_host};
+use monitor::{get_system_stats, kill_process, set_metrics_paused, start_metrics_emitter, Monitor};
+use network_cmds::{check_port, dns_lookup, get_public_ip, ping_host};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, WindowEvent,
+    Manager, WindowEvent,
 };
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -42,16 +42,6 @@ fn show_main_window(app: &tauri::AppHandle) {
 fn hide_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.hide();
-    }
-}
-
-fn toggle_main_window(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
-        } else {
-            show_main_window(app);
-        }
     }
 }
 
@@ -149,6 +139,17 @@ pub fn run() {
         );",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "notes_tags_pinned_and_repeat_columns",
+            sql: "ALTER TABLE notes ADD COLUMN tags TEXT NOT NULL DEFAULT '';
+        ALTER TABLE notes ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE events ADD COLUMN repeat TEXT NOT NULL DEFAULT 'none';
+        ALTER TABLE events ADD COLUMN repeat_until INTEGER;
+        ALTER TABLE todos ADD COLUMN repeat TEXT NOT NULL DEFAULT 'none';
+        ALTER TABLE todos ADD COLUMN repeat_until TEXT;",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let mut builder = tauri::Builder::default();
@@ -178,10 +179,12 @@ pub fn run() {
         .manage(AppPrefs::default())
         .invoke_handler(tauri::generate_handler![
             get_system_stats,
+            kill_process,
             set_close_to_tray,
             get_public_ip,
             ping_host,
             check_port,
+            dns_lookup,
             set_clipboard_watching,
             is_clipboard_watching,
             set_metrics_paused,
@@ -204,34 +207,10 @@ pub fn run() {
                     None,
                 ))?;
 
-                use tauri_plugin_global_shortcut::{
-                    Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
-                };
-
-                let toggle_shortcut =
-                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
-                let clipboard_shortcut =
-                    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV);
-                app.handle().plugin(
-                    tauri_plugin_global_shortcut::Builder::new()
-                        .with_handler(|app, shortcut, event| {
-                            if event.state != ShortcutState::Pressed {
-                                return;
-                            }
-                            if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::Space)
-                            {
-                                toggle_main_window(app);
-                            } else if shortcut
-                                .matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyV)
-                            {
-                                show_main_window(app);
-                                let _ = app.emit("open-clipboard", ());
-                            }
-                        })
-                        .build(),
-                )?;
-                let _ = app.global_shortcut().register(toggle_shortcut);
-                let _ = app.global_shortcut().register(clipboard_shortcut);
+                // Global shortcuts are registered from the frontend via
+                // @tauri-apps/plugin-global-shortcut (see syncGlobalHotkeys).
+                app.handle()
+                    .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
 
                 let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
                 let hide_i = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;

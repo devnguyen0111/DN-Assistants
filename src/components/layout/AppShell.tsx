@@ -15,7 +15,9 @@ import {
   NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
+  Pin,
   Settings,
+  Star,
   Timer,
   Flame,
   KeyRound,
@@ -25,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useI18n } from "@/lib/i18n";
+import { navLabel } from "@/lib/page-meta";
 import { useSettings } from "@/lib/settings-context";
 import type { AppRoute } from "@/lib/routing";
 import { cn } from "@/lib/utils";
@@ -39,28 +42,10 @@ type AppShellProps = {
 type NavItem = {
   route: AppRoute;
   icon: typeof Clock3;
-  labelKey:
-    | "navHome"
-    | "navClock"
-    | "navCalendar"
-    | "navCalculator"
-    | "navCurrency"
-    | "navDevTools"
-    | "navNotes"
-    | "navTodo"
-    | "navClipboard"
-    | "navPasswords"
-    | "navFocus"
-    | "navTikTok"
-    | "navSystem"
-    | "navNetwork"
-    | "navWeather"
-    | "navSettings"
-    | "navAbout";
 };
 
 type NavGroup = {
-  labelKey: "navGroupMain" | "navGroupTools" | "navGroupSystem";
+  labelKey: "navGroupMain" | "navGroupTools" | "navGroupSystem" | "navGroupFavorites";
   items: NavItem[];
 };
 
@@ -68,41 +53,117 @@ const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: "navGroupMain",
     items: [
-      { route: "home", icon: Home, labelKey: "navHome" },
-      { route: "clock", icon: Clock3, labelKey: "navClock" },
-      { route: "calendar", icon: CalendarDays, labelKey: "navCalendar" },
+      { route: "home", icon: Home },
+      { route: "clock", icon: Clock3 },
+      { route: "calendar", icon: CalendarDays },
     ],
   },
   {
     labelKey: "navGroupTools",
     items: [
-      { route: "calculator", icon: Calculator, labelKey: "navCalculator" },
-      { route: "currency", icon: Coins, labelKey: "navCurrency" },
-      { route: "devtools", icon: Code2, labelKey: "navDevTools" },
-      { route: "notes", icon: NotebookPen, labelKey: "navNotes" },
-      { route: "todo", icon: CheckSquare, labelKey: "navTodo" },
-      { route: "clipboard", icon: ClipboardList, labelKey: "navClipboard" },
-      { route: "passwords", icon: KeyRound, labelKey: "navPasswords" },
-      { route: "focus", icon: Timer, labelKey: "navFocus" },
-      { route: "tiktok", icon: Flame, labelKey: "navTikTok" },
+      { route: "calculator", icon: Calculator },
+      { route: "currency", icon: Coins },
+      { route: "devtools", icon: Code2 },
+      { route: "notes", icon: NotebookPen },
+      { route: "todo", icon: CheckSquare },
+      { route: "clipboard", icon: ClipboardList },
+      { route: "passwords", icon: KeyRound },
+      { route: "focus", icon: Timer },
+      { route: "tiktok", icon: Flame },
     ],
   },
   {
     labelKey: "navGroupSystem",
     items: [
-      { route: "system", icon: Monitor, labelKey: "navSystem" },
-      { route: "network", icon: Network, labelKey: "navNetwork" },
-      { route: "weather", icon: CloudSun, labelKey: "navWeather" },
-      { route: "settings", icon: Settings, labelKey: "navSettings" },
-      { route: "about", icon: Info, labelKey: "navAbout" },
+      { route: "system", icon: Monitor },
+      { route: "network", icon: Network },
+      { route: "weather", icon: CloudSun },
+      { route: "settings", icon: Settings },
+      { route: "about", icon: Info },
     ],
   },
 ];
+
+const ROUTE_ICON: Record<AppRoute, typeof Home> = {
+  home: Home,
+  clock: Clock3,
+  calendar: CalendarDays,
+  calculator: Calculator,
+  currency: Coins,
+  devtools: Code2,
+  notes: NotebookPen,
+  todo: CheckSquare,
+  clipboard: ClipboardList,
+  passwords: KeyRound,
+  focus: Timer,
+  tiktok: Flame,
+  system: Monitor,
+  network: Network,
+  weather: CloudSun,
+  settings: Settings,
+  about: Info,
+};
 
 export function AppShell({ route, onNavigate, children }: AppShellProps) {
   const { t } = useI18n();
   const { settings, updateSettings } = useSettings();
   const collapsed = settings.sidebarCollapsed;
+  const favorites = settings.favoriteRoutes;
+
+  const toggleFavorite = (r: AppRoute) => {
+    const next = favorites.includes(r)
+      ? favorites.filter((x) => x !== r)
+      : [...favorites, r];
+    void updateSettings({ favoriteRoutes: next });
+  };
+
+  const renderItem = (item: NavItem, showPin = true) => {
+    const Icon = item.icon;
+    const active = route === item.route;
+    const label = navLabel(t, item.route);
+    const isFav = favorites.includes(item.route);
+    const btn = (
+      <div key={item.route} className={cn("group relative flex", collapsed ? "justify-center" : "")}>
+        <Button
+          variant={active ? "secondary" : "ghost"}
+          className={cn(
+            "h-10 gap-2",
+            collapsed ? "w-11 justify-center px-0" : "w-full justify-start pr-8",
+            active && "border-l-2 border-l-primary bg-primary/15 text-foreground",
+          )}
+          onClick={() => onNavigate(item.route)}
+          title={label}
+          aria-current={active ? "page" : undefined}
+        >
+          <Icon className="size-4 shrink-0" />
+          {!collapsed && <span className="truncate">{label}</span>}
+        </Button>
+        {!collapsed && showPin && item.route !== "home" && (
+          <button
+            type="button"
+            className={cn(
+              "absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100",
+              isFav && "opacity-100 text-primary",
+            )}
+            title={isFav ? t.unpinFavorite : t.pinFavorite}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(item.route);
+            }}
+          >
+            {isFav ? <Star className="size-3.5 fill-current" /> : <Pin className="size-3.5" />}
+          </button>
+        )}
+      </div>
+    );
+    if (!collapsed) return btn;
+    return (
+      <Tooltip key={item.route} delayDuration={200}>
+        <TooltipTrigger asChild>{btn}</TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
+    );
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -123,6 +184,19 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
         </div>
 
         <nav className="flex flex-1 flex-col gap-3 overflow-y-auto">
+          {favorites.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {!collapsed && (
+                <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t.navGroupFavorites}
+                </p>
+              )}
+              {collapsed && <Separator className="my-1" />}
+              {favorites.map((r) =>
+                renderItem({ route: r, icon: ROUTE_ICON[r] }, false),
+              )}
+            </div>
+          )}
           {NAV_GROUPS.map((group) => (
             <div key={group.labelKey} className="flex flex-col gap-1">
               {!collapsed && (
@@ -131,35 +205,7 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
                 </p>
               )}
               {collapsed && <Separator className="my-1" />}
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = route === item.route;
-                const label = t[item.labelKey];
-                const btn = (
-                  <Button
-                    key={item.route}
-                    variant={active ? "secondary" : "ghost"}
-                    className={cn(
-                      "h-10 gap-2",
-                      collapsed ? "w-11 justify-center px-0" : "w-full justify-start",
-                      active && "bg-primary/15 text-foreground",
-                    )}
-                    onClick={() => onNavigate(item.route)}
-                    title={label}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <Icon className="size-4 shrink-0" />
-                    {!collapsed && <span className="truncate">{label}</span>}
-                  </Button>
-                );
-                if (!collapsed) return btn;
-                return (
-                  <Tooltip key={item.route} delayDuration={200}>
-                    <TooltipTrigger asChild>{btn}</TooltipTrigger>
-                    <TooltipContent side="right">{label}</TooltipContent>
-                  </Tooltip>
-                );
-              })}
+              {group.items.map((item) => renderItem(item))}
             </div>
           ))}
         </nav>
@@ -184,7 +230,7 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">
-          <AppHeader onNavigate={onNavigate} />
+          <AppHeader route={route} onNavigate={onNavigate} />
           <main className="min-h-0">{children}</main>
         </div>
       </div>

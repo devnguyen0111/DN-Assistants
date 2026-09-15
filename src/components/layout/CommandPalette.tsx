@@ -32,8 +32,10 @@ import { Button } from "@/components/ui/button";
 import { evaluate, formatResult } from "@/lib/calculator";
 import { convertCurrency, formatConverted, parseCurrencyQuery } from "@/lib/currency";
 import { listEvents, type CalendarEvent } from "@/lib/events";
+import { createNote, searchNotes, type Note } from "@/lib/notes";
 import { localeTag, useI18n } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
+import { useSettings } from "@/lib/settings-context";
 import {
   getCachedEntries,
   isVaultUnlocked,
@@ -98,8 +100,10 @@ function looksLikeMath(query: string): boolean {
 export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
+  const { settings, updateSettings } = useSettings();
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [fxResult, setFxResult] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,6 +116,21 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
       .then(setEvents)
       .catch(() => setEvents([]));
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const q = query.trim();
+    if (!q) {
+      setNotes([]);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void searchNotes(q)
+        .then((rows) => setNotes(rows.slice(0, 6)))
+        .catch(() => setNotes([]));
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [query, open]);
 
   useEffect(() => {
     const parsed = parseCurrencyQuery?.(query);
@@ -267,6 +286,45 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
           )}
         </CommandGroup>
 
+        <CommandGroup heading={t.homeScratchpad}>
+          <CommandItem
+            value={`scratch-save ${t.commandScratchSave}`}
+            onSelect={() => {
+              const body = settings.scratchpad.trim();
+              if (!body) {
+                onOpenChange(false);
+                return;
+              }
+              void createNote({
+                title: body.split("\n")[0]?.slice(0, 60) || t.homeScratchpad,
+                body,
+              })
+                .then(() => updateSettings({ scratchpad: "" }))
+                .then(() => {
+                  toast.success(t.saved);
+                  onNavigate("notes");
+                  onOpenChange(false);
+                })
+                .catch((e) => toast.error(String(e)));
+            }}
+          >
+            <NotebookPen className="size-4" />
+            {t.commandScratchSave}
+          </CommandItem>
+          <CommandItem
+            value={`scratch-clear ${t.commandScratchClear}`}
+            onSelect={() => {
+              void updateSettings({ scratchpad: "" }).then(() => {
+                toast.success(t.deleted);
+                onOpenChange(false);
+              });
+            }}
+          >
+            <NotebookPen className="size-4" />
+            {t.commandScratchClear}
+          </CommandItem>
+        </CommandGroup>
+
         <CommandGroup heading={t.commandNavigate}>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -285,6 +343,27 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
             );
           })}
         </CommandGroup>
+
+        {notes.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading={t.commandNotes}>
+              {notes.map((note) => (
+                <CommandItem
+                  key={note.id}
+                  value={`note-${note.id}-${note.title}`}
+                  onSelect={() => {
+                    onNavigate("notes");
+                    onOpenChange(false);
+                  }}
+                >
+                  <NotebookPen className="size-4" />
+                  <span className="truncate">{note.title || t.noteTitlePlaceholder}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
+        )}
 
         {filteredEvents.length > 0 && (
           <>

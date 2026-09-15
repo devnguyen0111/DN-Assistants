@@ -56,8 +56,49 @@ export function parseHashRoute(hash = window.location.hash): AppRoute {
   return "home";
 }
 
+export type WidgetKind = "clock" | "focus" | "cpu";
+
+export function parseWidgetKind(hash = window.location.hash): WidgetKind | null {
+  const parts = hash.replace(/^#\/?/, "").split("/");
+  if (parts[0]?.toLowerCase() !== "widget") return null;
+  const kind = parts[1]?.toLowerCase();
+  if (kind === "clock" || kind === "focus" || kind === "cpu") return kind;
+  return null;
+}
+
 export function routeHash(route: AppRoute): string {
   return `#/${route}`;
+}
+
+export async function openWidgetWindow(kind: WidgetKind) {
+  try {
+    const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+    const label = `widget-${kind}`;
+    const existing = await WebviewWindow.getByLabel(label);
+    if (existing) {
+      await existing.show();
+      await existing.setFocus();
+      return;
+    }
+    const sizes = {
+      clock: { width: 280, height: 140 },
+      focus: { width: 260, height: 180 },
+      cpu: { width: 220, height: 120 },
+    }[kind];
+    new WebviewWindow(label, {
+      url: `index.html#/widget/${kind}`,
+      title: `DN ${kind}`,
+      width: sizes.width,
+      height: sizes.height,
+      decorations: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: true,
+      center: true,
+    });
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 export function setHashRoute(route: AppRoute) {
