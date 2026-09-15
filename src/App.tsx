@@ -10,9 +10,10 @@ import { useEventReminders } from "@/hooks/useEventReminders";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useTikTokStreakReminders } from "@/hooks/useTikTokStreakReminders";
 import { useHashRoute } from "@/hooks/useHashRoute";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider, useI18n } from "@/lib/i18n";
 import { SettingsProvider } from "@/lib/settings-context";
 import { ThemeProvider } from "@/lib/theme";
+import { promptUpdateIfAvailable } from "@/lib/updates";
 import { AboutPage } from "@/pages/AboutPage";
 import { CalculatorPage } from "@/pages/CalculatorPage";
 import { CalendarPage } from "@/pages/CalendarPage";
@@ -24,6 +25,7 @@ import { FocusPage } from "@/pages/FocusPage";
 import { HomePage } from "@/pages/HomePage";
 import { NetworkPage } from "@/pages/NetworkPage";
 import { NotesPage } from "@/pages/NotesPage";
+import { PasswordsPage } from "@/pages/PasswordsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SystemPage } from "@/pages/SystemPage";
 import { TikTokPage } from "@/pages/TikTokPage";
@@ -36,6 +38,7 @@ function AppRoutes() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useEventReminders();
   useTikTokStreakReminders();
+  const { t } = useI18n();
 
   const onNavigate = useCallback((r: typeof route) => setRoute(r), [setRoute]);
   const onTogglePalette = useCallback(() => setPaletteOpen((o) => !o), []);
@@ -57,6 +60,16 @@ function AppRoutes() {
     return () => unlisten?.();
   }, [onNavigate]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void promptUpdateIfAvailable({
+        updateAvailable: t.updateAvailable,
+        installUpdate: t.installUpdate,
+      });
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [t.installUpdate, t.updateAvailable]);
+
   return (
     <AppShell route={route} onNavigate={onNavigate}>
       {route === "home" && <HomePage onNavigate={onNavigate} />}
@@ -68,6 +81,7 @@ function AppRoutes() {
       {route === "notes" && <NotesPage />}
       {route === "todo" && <TodoPage />}
       {route === "clipboard" && <ClipboardPage />}
+      {route === "passwords" && <PasswordsPage />}
       {route === "focus" && <FocusPage />}
       {route === "tiktok" && <TikTokPage />}
       {route === "system" && <SystemPage />}

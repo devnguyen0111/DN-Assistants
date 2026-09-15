@@ -1,6 +1,6 @@
 [package]
 name = "dn-assistant"
-version = "0.1.0"
+version = "0.1.1"
 description = "DN Assistant desktop utilities"
 authors = ["you"]
 edition = "2021"
@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "protocol-asset"] }
 tauri-plugin-opener = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
@@ -28,6 +28,9 @@ serde_json = "1"
 sysinfo = "0.35"
 nvml-wrapper = "0.11"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls", "json"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-window-state = "2"

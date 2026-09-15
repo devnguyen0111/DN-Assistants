@@ -19,6 +19,10 @@ import { ACCENT_OPTIONS, type AccentColor, type Density } from "@/lib/settings";
 import { PRIMARY_IANA, POPULAR_IANA, getZoneById, zoneLabel } from "@/lib/timezones";
 import { clearClipboardHistory } from "@/lib/clipboard-history";
 import {
+  checkForAppUpdate,
+  downloadAndInstallUpdate,
+} from "@/lib/updates";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -61,16 +65,21 @@ export function SettingsPage() {
   const checkUpdates = async () => {
     setUpdateStatus(null);
     try {
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
-      if (!update) {
+      const result = await checkForAppUpdate();
+      if (result.status === "unavailable") {
+        setUpdateStatus(t.unavailable);
+        return;
+      }
+      if (result.status === "error") {
+        setUpdateStatus(result.message);
+        return;
+      }
+      if (result.status === "up-to-date") {
         setUpdateStatus(t.upToDate);
         return;
       }
-      setUpdateStatus(`${t.updateAvailable}: ${update.version}`);
-      await update.downloadAndInstall();
-      const { relaunch } = await import("@tauri-apps/plugin-process");
-      await relaunch();
+      setUpdateStatus(`${t.updateAvailable}: ${result.version}`);
+      await downloadAndInstallUpdate();
     } catch (err) {
       setUpdateStatus(err instanceof Error ? err.message : String(err));
     }

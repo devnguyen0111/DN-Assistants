@@ -4,8 +4,7 @@ import { Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n";
 
-const APP_VERSION = "0.1.0";
-const REPO_URL = "https://github.com/";
+const REPO_URL = "https://github.com/devnguyen0111/DN-Assistants";
 
 type OsInfo = {
   platform: string;
@@ -26,14 +25,25 @@ async function loadOsInfo(): Promise<OsInfo | null> {
   }
 }
 
+async function loadAppVersion(): Promise<string> {
+  try {
+    const { getVersion } = await import("@tauri-apps/api/app");
+    return await getVersion();
+  } catch {
+    return "0.1.1";
+  }
+}
+
 export function AboutPage() {
   const { t } = useI18n();
   const root = useRef<HTMLDivElement>(null);
   const scope = useRef<ReturnType<typeof createScope> | null>(null);
   const [osInfo, setOsInfo] = useState<OsInfo | null>(null);
+  const [version, setVersion] = useState("…");
 
   useEffect(() => {
     void loadOsInfo().then(setOsInfo);
+    void loadAppVersion().then(setVersion);
   }, []);
 
   useEffect(() => {
@@ -61,7 +71,7 @@ export function AboutPage() {
         <CardContent className="space-y-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t.aboutVersion}</span>
-            <span className="font-mono tabular-nums">{APP_VERSION}</span>
+            <span className="font-mono tabular-nums">{version}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t.aboutOs}</span>
@@ -79,9 +89,9 @@ export function AboutPage() {
               href={REPO_URL}
               target="_blank"
               rel="noreferrer"
-              className="truncate text-primary underline-offset-4 hover:underline"
+              className="text-primary hover:underline"
             >
-              {REPO_URL}
+              GitHub
             </a>
           </div>
         </CardContent>

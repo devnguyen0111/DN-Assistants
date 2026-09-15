@@ -17,6 +17,7 @@ import {
   Settings,
   Timer,
   Flame,
+  KeyRound,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -27,11 +28,17 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
 import { evaluate, formatResult } from "@/lib/calculator";
 import { convertCurrency, formatConverted, parseCurrencyQuery } from "@/lib/currency";
 import { listEvents, type CalendarEvent } from "@/lib/events";
 import { localeTag, useI18n } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
+import {
+  getCachedEntries,
+  isVaultUnlocked,
+  searchVaultEntries,
+} from "@/lib/vault";
 import { toast } from "sonner";
 
 type Props = {
@@ -53,6 +60,7 @@ const NAV_ITEMS: Array<{
     | "navNotes"
     | "navTodo"
     | "navClipboard"
+    | "navPasswords"
     | "navFocus"
     | "navTikTok"
     | "navSystem"
@@ -70,6 +78,7 @@ const NAV_ITEMS: Array<{
   { route: "notes", icon: NotebookPen, labelKey: "navNotes" },
   { route: "todo", icon: CheckSquare, labelKey: "navTodo" },
   { route: "clipboard", icon: ClipboardList, labelKey: "navClipboard" },
+  { route: "passwords", icon: KeyRound, labelKey: "navPasswords" },
   { route: "focus", icon: Timer, labelKey: "navFocus" },
   { route: "tiktok", icon: Flame, labelKey: "navTikTok" },
   { route: "system", icon: Monitor, labelKey: "navSystem" },
@@ -148,6 +157,14 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
       .slice(0, 8);
   }, [events, query]);
 
+  const vaultUnlocked = isVaultUnlocked();
+  const vaultMatches = useMemo(() => {
+    if (!open) return [];
+    const q = query.trim();
+    if (!vaultUnlocked || !q) return [];
+    return searchVaultEntries(q, getCachedEntries()).slice(0, 8);
+  }, [query, vaultUnlocked, open]);
+
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} title={t.commandPalette}>
       <CommandInput
@@ -191,6 +208,64 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
             </CommandItem>
           </CommandGroup>
         )}
+
+        <CommandGroup heading={t.vaultTitle}>
+          {!vaultUnlocked ? (
+            <CommandItem
+              value={`vault-unlock ${t.vaultUnlock}`}
+              onSelect={() => {
+                onNavigate("passwords");
+                onOpenChange(false);
+              }}
+            >
+              <KeyRound className="size-4" />
+              {t.vaultUnlockTitle}
+            </CommandItem>
+          ) : vaultMatches.length === 0 && query.trim() ? (
+            <CommandItem
+              value={`vault-empty ${t.vaultEmpty}`}
+              onSelect={() => {
+                onNavigate("passwords");
+                onOpenChange(false);
+              }}
+            >
+              <KeyRound className="size-4" />
+              {t.vaultEmpty}
+            </CommandItem>
+          ) : (
+            vaultMatches.map((entry) => (
+              <CommandItem
+                key={entry.id}
+                value={`vault-${entry.id}-${entry.title}-${entry.username}-${entry.url}`}
+                onSelect={() => {
+                  void navigator.clipboard.writeText(entry.password);
+                  toast.success(`${t.copied}: ${t.vaultFieldPassword}`);
+                  onOpenChange(false);
+                }}
+              >
+                <KeyRound className="size-4" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">{entry.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {entry.username || entry.url}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void navigator.clipboard.writeText(entry.username);
+                    toast.success(`${t.copied}: ${t.vaultFieldUsername}`);
+                  }}
+                >
+                  {t.vaultCopyUsername}
+                </Button>
+              </CommandItem>
+            ))
+          )}
+        </CommandGroup>
 
         <CommandGroup heading={t.commandNavigate}>
           {NAV_ITEMS.map((item) => {

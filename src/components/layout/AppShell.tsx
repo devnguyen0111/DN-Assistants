@@ -18,6 +18,7 @@ import {
   Settings,
   Timer,
   Flame,
+  KeyRound,
 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ type NavItem = {
     | "navNotes"
     | "navTodo"
     | "navClipboard"
+    | "navPasswords"
     | "navFocus"
     | "navTikTok"
     | "navSystem"
@@ -80,6 +82,7 @@ const NAV_GROUPS: NavGroup[] = [
       { route: "notes", icon: NotebookPen, labelKey: "navNotes" },
       { route: "todo", icon: CheckSquare, labelKey: "navTodo" },
       { route: "clipboard", icon: ClipboardList, labelKey: "navClipboard" },
+      { route: "passwords", icon: KeyRound, labelKey: "navPasswords" },
       { route: "focus", icon: Timer, labelKey: "navFocus" },
       { route: "tiktok", icon: Flame, labelKey: "navTikTok" },
     ],

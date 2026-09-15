@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Copy, Pin, PinOff, Search, Trash2 } from "lucide-react";
+import { ClipboardList, Copy, ImageIcon, Pin, PinOff, Search, Trash2, Type } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,13 +19,48 @@ import { localeTag, useI18n } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings-context";
 import {
   clearClipboardHistory,
+  clipboardImageSrc,
+  copyClipboardItem,
   deleteItem,
   listClipboardItems,
   pinItem,
   unpinItem,
+  upsertClipboardImage,
   upsertClipboardItem,
+  type ClipboardChangedPayload,
   type ClipboardItem,
+  type ClipboardKind,
 } from "@/lib/clipboard-history";
+
+type Filter = "all" | ClipboardKind;
+
+function ClipboardThumb({ path }: { path: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void clipboardImageSrc(path).then((url) => {
+      if (!cancelled) setSrc(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
+  if (!src) {
+    return (
+      <div className="flex h-16 w-24 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <ImageIcon className="size-5" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className="h-16 w-24 rounded-md border object-cover"
+      loading="lazy"
+    />
+  );
+}
 
 export function ClipboardCard() {
   const { locale, t } = useI18n();
@@ -34,6 +69,7 @@ export function ClipboardCard() {
   const [items, setItems] = useState<ClipboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
   const [confirmClear, setConfirmClear] = useState(false);
 
   const refresh = async () => {
@@ -54,16 +90,27 @@ export function ClipboardCard() {
     return () => window.removeEventListener("dn-clipboard-changed", onChanged);
   }, []);
 
-  // Watch for Tauri clipboard-changed events (emitted by a Rust-side watcher, if enabled).
   useEffect(() => {
     if (!settings.clipboardHistoryEnabled) return;
     let unlisten: (() => void) | undefined;
     void (async () => {
       try {
         const { listen } = await import("@tauri-apps/api/event");
-        unlisten = await listen<string>("clipboard-changed", (event) => {
-          void upsertClipboardItem(event.payload);
-        });
+        unlisten = await listen<ClipboardChangedPayload | string>(
+          "clipboard-changed",
+          (event) => {
+            const payload = event.payload;
+            if (typeof payload === "string") {
+              void upsertClipboardItem(payload);
+              return;
+            }
+            if (payload.kind === "image") {
+              void upsertClipboardImage(payload);
+            } else {
+              void upsertClipboardItem(payload.content);
+            }
+          },
+        );
       } catch {
         // Tauri event API unavailable (browser preview)
       }
@@ -73,13 +120,19 @@ export function ClipboardCard() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) => item.content.toLowerCase().includes(q));
-  }, [items, query]);
+    return items.filter((item) => {
+      if (filter !== "all" && item.kind !== filter) return false;
+      if (!q) return true;
+      if (item.kind === "image") {
+        return `${item.width}x${item.height}`.includes(q) || item.mime?.toLowerCase().includes(q);
+      }
+      return item.content.toLowerCase().includes(q);
+    });
+  }, [items, query, filter]);
 
   const copyItem = async (item: ClipboardItem) => {
     try {
-      await navigator.clipboard.writeText(item.content);
+      await copyClipboardItem(item);
       toast.success(t.copied);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -134,6 +187,27 @@ export function ClipboardCard() {
               {t.clipboardEnabledHint}
             </p>
           )}
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ["all", t.clipboardFilterAll],
+                ["text", t.clipboardFilterText],
+                ["image", t.clipboardFilterImage],
+              ] as const
+            ).map(([key, label]) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={filter === key ? "default" : "outline"}
+                className="h-7 px-2.5 text-xs"
+                onClick={() => setFilter(key)}
+              >
+                {key === "text" && <Type className="mr-1 size-3" />}
+                {key === "image" && <ImageIcon className="mr-1 size-3" />}
+                {label}
+              </Button>
+            ))}
+          </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
@@ -156,7 +230,21 @@ export function ClipboardCard() {
                     className="group flex items-start gap-2 rounded-lg border border-border/60 px-3 py-2"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-3 whitespace-pre-wrap text-sm">{item.content}</p>
+                      {item.kind === "image" ? (
+                        <div className="flex items-center gap-3">
+                          <ClipboardThumb path={item.content} />
+                          <div>
+                            <p className="text-sm font-medium">{t.clipboardImageLabel}</p>
+                            <p className="font-mono text-[10px] text-muted-foreground">
+                              {item.width && item.height
+                                ? `${item.width}×${item.height}`
+                                : "PNG"}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="line-clamp-3 whitespace-pre-wrap text-sm">{item.content}</p>
+                      )}
                       <p className="mt-1 font-mono text-[10px] text-muted-foreground">
                         {new Intl.DateTimeFormat(tag, {
                           dateStyle: "short",

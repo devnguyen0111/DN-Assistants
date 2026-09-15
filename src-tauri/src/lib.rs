@@ -128,6 +128,27 @@ pub fn run() {
         );",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "clipboard_items_image_columns",
+            sql: "ALTER TABLE clipboard_items ADD COLUMN kind TEXT NOT NULL DEFAULT 'text';
+        ALTER TABLE clipboard_items ADD COLUMN mime TEXT;
+        ALTER TABLE clipboard_items ADD COLUMN width INTEGER;
+        ALTER TABLE clipboard_items ADD COLUMN height INTEGER;",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "create_vault_entries_table",
+            sql: "CREATE TABLE IF NOT EXISTS vault_entries (
+            id TEXT PRIMARY KEY NOT NULL,
+            nonce TEXT NOT NULL,
+            ciphertext TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let mut builder = tauri::Builder::default();
