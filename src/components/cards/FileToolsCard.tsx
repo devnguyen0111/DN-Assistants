@@ -1,13 +1,22 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   CheckCircle2,
   Copy,
   Download,
+  ExternalLink,
   FileCheck2,
   FileDigit,
+  FileEdit,
+  FolderOpen,
   HardDrive,
   ImageIcon,
+  KeyRound,
+  QrCode,
+  Sparkles,
+  Trash2,
   Type,
+  Wifi,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -24,10 +34,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
 import { formatBytes } from "@/lib/utils";
+import { scanQrFromImage, type QrScanResult } from "@/lib/qr-scanner";
+import {
+  applyBatchRename,
+  DEFAULT_BATCH_RENAME_RULE,
+  generateBatchScript,
+  type BatchRenameRule,
+  type CaseTransform,
+  type NumberPosition,
+} from "@/lib/batch-renamer";
+import { createVaultEntry, isVaultUnlocked } from "@/lib/vault";
 
 async function copyText(text: string, label: string) {
   try {
@@ -38,7 +59,10 @@ async function copyText(text: string, label: string) {
   }
 }
 
-async function computeHash(buffer: ArrayBuffer, algorithm: "SHA-256" | "SHA-1" | "SHA-512"): Promise<string> {
+async function computeHash(
+  buffer: ArrayBuffer,
+  algorithm: "SHA-256" | "SHA-1" | "SHA-512",
+): Promise<string> {
   const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -62,6 +86,14 @@ export function FileToolsCard() {
               <FileCheck2 className="size-3.5" />
               {t.fileHasherTab}
             </TabsTrigger>
+            <TabsTrigger value="batch" className="gap-1.5">
+              <FileEdit className="size-3.5" />
+              {t.batchRenamerTab}
+            </TabsTrigger>
+            <TabsTrigger value="qr" className="gap-1.5">
+              <QrCode className="size-3.5" />
+              {t.qrScannerTab}
+            </TabsTrigger>
             <TabsTrigger value="image" className="gap-1.5">
               <ImageIcon className="size-3.5" />
               {t.imageConverterTab}
@@ -74,6 +106,14 @@ export function FileToolsCard() {
 
           <TabsContent value="hasher" className="mt-4">
             <HasherTab />
+          </TabsContent>
+
+          <TabsContent value="batch" className="mt-4">
+            <BatchRenamerTab />
+          </TabsContent>
+
+          <TabsContent value="qr" className="mt-4">
+            <QrScannerTab />
           </TabsContent>
 
           <TabsContent value="image" className="mt-4">
@@ -89,6 +129,9 @@ export function FileToolsCard() {
   );
 }
 
+/* =========================================================================
+   1. HASHER TAB
+   ========================================================================= */
 function HasherTab() {
   const { t } = useI18n();
   const inputId = useId();
@@ -172,7 +215,9 @@ function HasherTab() {
         )}
       </label>
 
-      {computing && <p className="text-center text-xs text-muted-foreground">Computing checksums...</p>}
+      {computing && (
+        <p className="text-center text-xs text-muted-foreground">Computing checksums...</p>
+      )}
 
       {sha256 && (
         <div className="space-y-3 rounded-xl border bg-card/60 p-4">
@@ -226,7 +271,6 @@ function HasherTab() {
             </div>
           </div>
 
-          {/* Verification input */}
           <div className="pt-2 border-t space-y-2">
             <Label className="text-xs">Compare against expected checksum</Label>
             <div className="flex items-center gap-2">
@@ -256,6 +300,639 @@ function HasherTab() {
   );
 }
 
+/* =========================================================================
+   2. BATCH RENAMER TAB (PRO SUITE)
+   ========================================================================= */
+function BatchRenamerTab() {
+  const { t } = useI18n();
+  const inputId = useId();
+  const [files, setFiles] = useState<{ id: string; name: string; size: number }[]>([]);
+  const [rule, setRule] = useState<BatchRenameRule>(DEFAULT_BATCH_RENAME_RULE);
+
+  const addFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const newItems = Array.from(fileList).map((f) => ({
+      id: `${f.name}-${f.size}-${Date.now()}-${Math.random()}`,
+      name: f.name,
+      size: f.size,
+    }));
+    setFiles((prev) => [...prev, ...newItems]);
+    toast.success(`Added ${newItems.length} file(s)`);
+  };
+
+  const clearFiles = () => {
+    setFiles([]);
+  };
+
+  const previewItems = useMemo(() => {
+    return applyBatchRename(files, rule);
+  }, [files, rule]);
+
+  const hasCollisions = useMemo(() => {
+    return previewItems.some((i) => i.hasCollision);
+  }, [previewItems]);
+
+  const changedCount = useMemo(() => {
+    return previewItems.filter((i) => i.isChanged).length;
+  }, [previewItems]);
+
+  const downloadScript = (format: "powershell" | "cmd") => {
+    const script = generateBatchScript(previewItems, format);
+    if (!script) {
+      toast.error("No valid renamed files to export");
+      return;
+    }
+    const ext = format === "powershell" ? "ps1" : "bat";
+    const mime = format === "powershell" ? "text/plain" : "application/x-bat";
+    const blob = new Blob([script], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dn-rename-${Date.now()}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${format === "powershell" ? "PowerShell" : "Batch"} script`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">{t.batchRenamerDesc}</p>
+        <div className="flex items-center gap-2">
+          <label htmlFor={inputId}>
+            <input
+              id={inputId}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => addFiles(e.target.files)}
+            />
+            <Button size="sm" variant="outline" asChild className="cursor-pointer gap-1.5">
+              <span>
+                <FolderOpen className="size-3.5" />
+                {t.addFiles}
+              </span>
+            </Button>
+          </label>
+          {files.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={clearFiles} className="gap-1.5 text-xs text-destructive">
+              <Trash2 className="size-3.5" />
+              {t.clearFiles} ({files.length})
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {files.length === 0 ? (
+        <label
+          htmlFor={inputId}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            addFiles(e.dataTransfer.files);
+          }}
+          className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-muted/20 p-6 text-center transition-colors hover:bg-muted/40"
+        >
+          <div className="space-y-1.5">
+            <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <FileEdit className="size-5" />
+            </div>
+            <p className="text-sm font-medium">{t.noFilesAdded}</p>
+            <p className="text-xs text-muted-foreground">Select dozens or hundreds of files to batch rename</p>
+          </div>
+        </label>
+      ) : (
+        <div className="space-y-4">
+          {/* Rule Configuration Cards */}
+          <div className="grid gap-3 rounded-xl border bg-card/60 p-4 md:grid-cols-2">
+            {/* Find & Replace */}
+            <div className="space-y-2 rounded-lg border bg-background/50 p-3">
+              <p className="text-xs font-semibold">{t.findAndReplace}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder={t.findPlaceholder}
+                  value={rule.find}
+                  onChange={(e) => setRule((r) => ({ ...r, find: e.target.value }))}
+                  className="font-mono text-xs"
+                />
+                <Input
+                  placeholder={t.replacePlaceholder}
+                  value={rule.replace}
+                  onChange={(e) => setRule((r) => ({ ...r, replace: e.target.value }))}
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-4 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <Switch
+                    id="matchCase"
+                    checked={rule.matchCase}
+                    onCheckedChange={(checked) => setRule((r) => ({ ...r, matchCase: checked }))}
+                  />
+                  <Label htmlFor="matchCase" className="text-[11px] cursor-pointer">
+                    {t.matchCase}
+                  </Label>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Switch
+                    id="useRegex"
+                    checked={rule.isRegex}
+                    onCheckedChange={(checked) => setRule((r) => ({ ...r, isRegex: checked }))}
+                  />
+                  <Label htmlFor="useRegex" className="text-[11px] cursor-pointer">
+                    {t.useRegex}
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Prefix & Suffix */}
+            <div className="space-y-2 rounded-lg border bg-background/50 p-3">
+              <p className="text-xs font-semibold">{t.prefixSuffix}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder={t.prefixPlaceholder}
+                  value={rule.prefix}
+                  onChange={(e) => setRule((r) => ({ ...r, prefix: e.target.value }))}
+                  className="font-mono text-xs"
+                />
+                <Input
+                  placeholder={t.suffixPlaceholder}
+                  value={rule.suffix}
+                  onChange={(e) => setRule((r) => ({ ...r, suffix: e.target.value }))}
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="pt-1 flex items-center gap-2">
+                <span className="text-[11px] text-muted-foreground">{t.caseTransform}:</span>
+                <Select
+                  value={rule.caseTransform}
+                  onValueChange={(v) => setRule((r) => ({ ...r, caseTransform: v as CaseTransform }))}
+                >
+                  <SelectTrigger className="h-7 text-xs flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Preserve (Không đổi)</SelectItem>
+                    <SelectItem value="lower">lowercase (chữ thường)</SelectItem>
+                    <SelectItem value="upper">UPPERCASE (CHỮ HOA)</SelectItem>
+                    <SelectItem value="title">Title Case (Chữ Hoa Đầu)</SelectItem>
+                    <SelectItem value="camel">camelCase</SelectItem>
+                    <SelectItem value="kebab">kebab-case</SelectItem>
+                    <SelectItem value="snake">snake_case</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Numbering Sequence */}
+            <div className="col-span-full space-y-2 rounded-lg border bg-background/50 p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="enableNumbering"
+                    checked={rule.enableNumbering}
+                    onCheckedChange={(checked) => setRule((r) => ({ ...r, enableNumbering: checked }))}
+                  />
+                  <Label htmlFor="enableNumbering" className="text-xs font-semibold cursor-pointer">
+                    {t.numbering}
+                  </Label>
+                </div>
+                {rule.enableNumbering && (
+                  <span className="text-[11px] text-primary font-mono">
+                    Example: {String(rule.startNumber).padStart(rule.digits, "0")}
+                  </span>
+                )}
+              </div>
+
+              {rule.enableNumbering && (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">{t.startAt}</Label>
+                    <Input
+                      type="number"
+                      value={rule.startNumber}
+                      onChange={(e) => setRule((r) => ({ ...r, startNumber: Number(e.target.value) || 1 }))}
+                      className="h-7 font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">{t.step}</Label>
+                    <Input
+                      type="number"
+                      value={rule.step}
+                      onChange={(e) => setRule((r) => ({ ...r, step: Number(e.target.value) || 1 }))}
+                      className="h-7 font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">{t.padZeros}</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={6}
+                      value={rule.digits}
+                      onChange={(e) => setRule((r) => ({ ...r, digits: Number(e.target.value) || 2 }))}
+                      className="h-7 font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">{t.position}</Label>
+                    <Select
+                      value={rule.numberPosition}
+                      onValueChange={(v) => setRule((r) => ({ ...r, numberPosition: v as NumberPosition }))}
+                    >
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prefix">{t.posPrefix}</SelectItem>
+                        <SelectItem value="suffix">{t.posSuffix}</SelectItem>
+                        <SelectItem value="replace">{t.posReplace}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">{t.separator}</Label>
+                    <Input
+                      value={rule.numberSeparator}
+                      onChange={(e) => setRule((r) => ({ ...r, numberSeparator: e.target.value }))}
+                      placeholder="_"
+                      className="h-7 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Collision Warning */}
+          {hasCollisions && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">
+              <AlertTriangle className="size-4 shrink-0" />
+              <span>{t.collisionWarning}</span>
+            </div>
+          )}
+
+          {/* Live Preview Table */}
+          <div className="rounded-xl border bg-card/40 overflow-hidden">
+            <div className="flex items-center justify-between border-b bg-muted/40 px-3 py-2 text-xs font-semibold">
+              <span>
+                Files ({files.length}) · <span className="text-primary">{changedCount} renamed</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadScript("powershell")}
+                  className="h-7 text-xs gap-1"
+                >
+                  <Download className="size-3" />
+                  {t.downloadPs1}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => downloadScript("cmd")}
+                  className="h-7 text-xs gap-1"
+                >
+                  <Download className="size-3" />
+                  {t.downloadBat}
+                </Button>
+              </div>
+            </div>
+
+            <ScrollArea className="h-64">
+              <div className="divide-y divide-border/60">
+                {previewItems.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className={`grid grid-cols-[auto_1fr_auto_1fr] items-center gap-2 px-3 py-2 text-xs ${
+                      item.hasCollision
+                        ? "bg-destructive/10"
+                        : item.isChanged
+                          ? "bg-primary/5 hover:bg-primary/10"
+                          : "hover:bg-muted/30"
+                    }`}
+                  >
+                    <span className="w-6 font-mono text-[10px] text-muted-foreground">{idx + 1}</span>
+                    <span className="truncate text-muted-foreground font-mono" title={item.originalName}>
+                      {item.originalName}
+                    </span>
+                    <span className="text-muted-foreground font-mono text-[10px]">→</span>
+                    <div className="flex items-center justify-between gap-1 overflow-hidden">
+                      <span
+                        className={`truncate font-mono font-medium ${
+                          item.hasCollision
+                            ? "text-destructive font-bold"
+                            : item.isChanged
+                              ? "text-primary"
+                              : "text-foreground"
+                        }`}
+                        title={item.newName}
+                      >
+                        {item.newName}
+                      </span>
+                      {item.hasCollision && (
+                        <Badge variant="destructive" className="h-4 px-1 text-[9px] shrink-0">
+                          Duplicate
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   3. SMART QR & BARCODE SCANNER TAB (PRO SUITE)
+   ========================================================================= */
+function QrScannerTab() {
+  const { t } = useI18n();
+  const inputId = useId();
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<QrScanResult | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  const processImageFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please provide an image file");
+      return;
+    }
+    setScanning(true);
+    setNotFound(false);
+    setScanResult(null);
+
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+
+    try {
+      const res = await scanQrFromImage(file);
+      if (res) {
+        setScanResult(res);
+        toast.success("QR Code detected successfully!");
+      } else {
+        setNotFound(true);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+      setNotFound(true);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  // Listen to clipboard paste (Ctrl+V) anywhere on the window when this tab is open
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            void processImageFile(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
+
+  const handleSaveToVault = async () => {
+    if (!scanResult?.otp) return;
+    const { issuer, label, secret } = scanResult.otp;
+
+    if (!isVaultUnlocked()) {
+      await copyText(secret, "Copied secret! Unlock Vault in Passwords to save.");
+      return;
+    }
+
+    try {
+      await createVaultEntry({
+        title: issuer ? `${issuer} (2FA)` : label || "2FA Token",
+        username: label,
+        password: "",
+        note: `Imported via QR Scanner on ${new Date().toLocaleDateString()}`,
+        totpSecret: secret,
+        url: "",
+      });
+      toast.success(t.saved);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <label
+        htmlFor={inputId}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const file = e.dataTransfer.files[0];
+          if (file) void processImageFile(file);
+        }}
+        className="flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-muted/20 p-6 text-center transition-colors hover:bg-muted/40"
+      >
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void processImageFile(f);
+          }}
+        />
+
+        {previewUrl ? (
+          <div className="flex flex-col items-center gap-2">
+            <img
+              src={previewUrl}
+              alt="Scan Target"
+              className="max-h-40 rounded-xl border object-contain shadow-md bg-background"
+            />
+            <p className="text-xs text-primary">Click or drop another image, or press Ctrl+V to paste screenshot</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <QrCode className="size-5" />
+            </div>
+            <p className="text-sm font-medium">{t.dropQrImage}</p>
+            <p className="text-xs text-muted-foreground">100% offline & client-side • Supports WiFi, 2FA OTP, URLs & Text</p>
+          </div>
+        )}
+      </label>
+
+      {scanning && <p className="text-center text-xs text-muted-foreground animate-pulse">Scanning image for QR / Barcode...</p>}
+
+      {notFound && (
+        <div className="flex items-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+          <XCircle className="size-4 shrink-0" />
+          <span>{t.noQrFound}</span>
+        </div>
+      )}
+
+      {scanResult && (
+        <div className="space-y-3 rounded-xl border bg-card/60 p-4">
+          {/* WiFi Payload */}
+          {scanResult.type === "wifi" && scanResult.wifi && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-emerald-500 text-white gap-1">
+                  <Wifi className="size-3.5" />
+                  {t.qrWifiDetected}
+                </Badge>
+                {scanResult.wifi.password && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 gap-1 text-xs"
+                    onClick={() => void copyText(scanResult.wifi?.password ?? "", t.copied)}
+                  >
+                    <Copy className="size-3.5" />
+                    {t.connectWifi}
+                  </Button>
+                )}
+              </div>
+              <div className="grid gap-2 rounded-lg border bg-background/60 p-3 text-xs sm:grid-cols-2">
+                <div>
+                  <span className="text-muted-foreground">SSID (Network Name):</span>
+                  <p className="font-semibold text-sm">{scanResult.wifi.ssid}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Password:</span>
+                  <p className="font-mono font-medium">{scanResult.wifi.password || "(None)"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Encryption:</span>
+                  <p className="font-mono text-muted-foreground">{scanResult.wifi.encryption || "WPA"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Hidden:</span>
+                  <p className="font-mono text-muted-foreground">{scanResult.wifi.hidden ? "Yes" : "No"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 2FA OTP Auth Payload */}
+          {scanResult.type === "otp" && scanResult.otp && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-indigo-500 text-white gap-1">
+                  <KeyRound className="size-3.5" />
+                  {t.qrOtpDetected}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-7 gap-1 text-xs"
+                  onClick={() => void handleSaveToVault()}
+                >
+                  <Sparkles className="size-3.5" />
+                  {t.saveToVault}
+                </Button>
+              </div>
+              <div className="grid gap-2 rounded-lg border bg-background/60 p-3 text-xs sm:grid-cols-2">
+                <div>
+                  <span className="text-muted-foreground">Issuer / Service:</span>
+                  <p className="font-semibold text-sm">{scanResult.otp.issuer || "General"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Account Label:</span>
+                  <p className="font-medium">{scanResult.otp.label}</p>
+                </div>
+                <div className="col-span-full">
+                  <span className="text-muted-foreground">Secret Key:</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Input readOnly value={scanResult.otp.secret} className="font-mono text-xs" />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 shrink-0"
+                      onClick={() => void copyText(scanResult.otp?.secret ?? "", t.copied)}
+                    >
+                      <Copy className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Web URL Payload */}
+          {scanResult.type === "url" && scanResult.url && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-blue-500 text-white gap-1">
+                  <ExternalLink className="size-3.5" />
+                  {t.qrUrlDetected}
+                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => void copyText(scanResult.url ?? "", t.copied)}
+                  >
+                    <Copy className="size-3.5" />
+                    Copy
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => window.open(scanResult.url, "_blank")}
+                  >
+                    <ExternalLink className="size-3.5" />
+                    {t.openUrl}
+                  </Button>
+                </div>
+              </div>
+              <Input readOnly value={scanResult.url} className="font-mono text-xs" />
+            </div>
+          )}
+
+          {/* Plain Text Payload */}
+          {scanResult.type === "text" && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold">{t.rawPayload}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 gap-1 text-xs"
+                  onClick={() => void copyText(scanResult.raw, t.copied)}
+                >
+                  <Copy className="size-3" />
+                  Copy
+                </Button>
+              </div>
+              <Textarea readOnly rows={4} value={scanResult.raw} className="font-mono text-xs" />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   4. IMAGE CONVERTER TAB
+   ========================================================================= */
 function ImageConverterTab() {
   const inputId = useId();
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -450,9 +1127,12 @@ function ImageConverterTab() {
   );
 }
 
+/* =========================================================================
+   5. TEXT INSPECTOR TAB
+   ========================================================================= */
 function TextInspectorTab() {
   const { t } = useI18n();
-  const [text, setText] = useState("Hello World! DN Assistant v0.3.0 is awesome.");
+  const [text, setText] = useState("Hello World! DN Assistant v0.4.0 is awesome.");
 
   const stats = useMemo(() => {
     const trimmed = text.trim();
@@ -460,7 +1140,7 @@ function TextInspectorTab() {
     const chars = text.length;
     const charsNoSpaces = text.replace(/\s+/g, "").length;
     const lines = text ? text.split("\n").length : 0;
-    const readingTimeMins = Math.ceil(words / 200); // 200 WPM average
+    const readingTimeMins = Math.ceil(words / 200);
 
     return { words, chars, charsNoSpaces, lines, readingTimeMins };
   }, [text]);
@@ -509,7 +1189,6 @@ function TextInspectorTab() {
 
   return (
     <div className="space-y-3">
-      {/* Stats Counter Bar */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="rounded-xl border bg-muted/20 p-2.5 text-center font-mono">
           <p className="text-[11px] text-muted-foreground">{t.wordCount}</p>
@@ -537,7 +1216,6 @@ function TextInspectorTab() {
         className="font-mono text-xs"
       />
 
-      {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-1.5">
         <Button size="sm" variant="outline" onClick={() => transformText("upper")}>
           {t.caseUpper}

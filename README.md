@@ -2,12 +2,16 @@
 
 Desktop utility app built with **Tauri 2**, **React 19**, **shadcn/ui**, **Lucide**, and **Anime.js**.
 
-**Version 0.3.2** - The Performance & Experience Engine Update ⚡
+**Version 0.4.0** - The Pro Power Suite Update 🚀
 
 ## Features
 
+- **Batch File Renamer Pro**: Comprehensive batch file renaming with Find & Replace (RegEx), Prefix/Suffix, automatic numbering sequences (`01`, `001`), case conversions, live side-by-side preview with duplicate collision detection, and 1-click PowerShell/Batch script export
+- **Smart QR & Barcode Scanner**: 100% offline, privacy-first scanner supporting image drag & drop and direct clipboard paste (`Ctrl+V`), with automatic parsing for WiFi credentials, 2FA tokens (`otpauth://`) with 1-click Save to Vault, and web links
+- **Scientific Calculator & Expanded Unit / Finance Suite**: Advanced math functions (`sin`, `cos`, `tan`, `log`, `ln`, `√`, `xʸ`, `π`, `e`), unit conversion expanded to Speed, Area, and Volume, plus interactive Bill Splitter & Tip Calculator and Discount/Savings Calculator
+- **Pro Markdown Notebook**: Quick formatting toolbar (Bold, Italic, Headings, Code blocks, Lists, Tasks, Tables), live word/character counters, visual dirty save state badge, and 1-click `.md` export
+- **Instant Todo in Command Palette**: Quick task creation from anywhere (`todo: <task>` or `+ <task>`) with Enter, active tasks list and 1-click completion in Command Palette and Bento Dashboard
 - **High-Performance Architecture & Code-Splitting**: Modular React lazy loading with custom shimmering page skeletons, 77.5% initial bundle size reduction, 23 KB retina icons, instant widget startup (4 kB), and GPU-accelerated page transitions
-- **Advanced Currency Suite**: Searchable currency picker with flags & symbols, multi-currency watchlist comparison table, international card/bank fee & spread calculator, and quick conversion reference matrix
 - **Comprehensive DevTools Suite**: JSON formatting/minifying, JSON to TypeScript interface generator, Base64 text & image/file preview/download, URL Inspector with interactive query parameter editor, JWT status & expiry countdown, MD5 & HMAC security, UUID batch & NanoID generation, WiFi QR code generator, regex tester with replace & presets, timestamp & world timezones, and text/code utilities
 - Home dashboard with greeting, quick actions, scratch pad, favorites, clock, agenda, system snapshot, weather, todos, notes, TikTok streaks, and daily habit check-ins
 - Multi-page shell with grouped sidebar + pin-to-favorites, page-aware header, density modes, bilingual vi/en

@@ -118,12 +118,11 @@ export function ClockCard() {
     [now, tag, settings.primaryTimezone],
   );
 
-  const dayKey = `${primary.year}-${primary.month}-${primary.day}`;
   const hour = Number(primary.hours);
 
   const lunar = useMemo(() => {
     return solarToLunar(primary.day, primary.month, primary.year, 7);
-  }, [dayKey, primary.day, primary.month, primary.year]);
+  }, [primary.day, primary.month, primary.year]);
 
   const lunarLabel = useMemo(() => {
     const leap = lunar.leap ? ` (${t.leapMonth})` : "";

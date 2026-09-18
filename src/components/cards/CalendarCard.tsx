@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { animate, createScope } from "animejs";
 import { ChevronLeft, ChevronRight, Plus, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
@@ -85,7 +85,12 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   const gridRef = useRef<HTMLDivElement>(null);
   const scope = useRef<ReturnType<typeof createScope> | null>(null);
 
-  const refresh = async () => {
+  const onEditConsumedRef = useRef(onEditConsumed);
+  useEffect(() => {
+    onEditConsumedRef.current = onEditConsumed;
+  }, [onEditConsumed]);
+
+  const refresh = useCallback(async () => {
     try {
       setEvents(await listEvents());
       onEventsChanged?.();
@@ -93,11 +98,11 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
-  };
+  }, [onEventsChanged]);
 
   useEffect(() => {
     void refresh();
-  }, []);
+  }, [refresh]);
 
   const openEdit = (event: CalendarEvent) => {
     setEditing(event);
@@ -116,7 +121,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   useEffect(() => {
     if (!editEvent) return;
     openEdit(editEvent);
-    onEditConsumed?.();
+    onEditConsumedRef.current?.();
   }, [editEvent]);
 
   useEffect(() => {

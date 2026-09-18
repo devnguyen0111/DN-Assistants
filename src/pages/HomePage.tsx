@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSystemStats } from "@/hooks/useSystemStats";
 import { formatEventRange, listUpcoming, type CalendarEvent } from "@/lib/events";
 import { createNote, listNotes, type Note } from "@/lib/notes";
-import { listTodos, type Todo } from "@/lib/todos";
+import { listTodos, toggleTodo, type Todo } from "@/lib/todos";
 import { getAllHabitsWithStats, toggleHabitDate, formatDateKey, type HabitStats } from "@/lib/habits";
 import { isDoneToday, listTikTokStreaks, type TikTokStreak } from "@/lib/tiktok-streaks";
 import { localeTag, useI18n } from "@/lib/i18n";
@@ -424,8 +424,30 @@ export function HomePage({ onNavigate }: Props) {
                 <p className="text-sm text-muted-foreground">{t.todoEmpty}</p>
               ) : (
                 todos.map((todo) => (
-                  <div key={todo.id} className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm">{todo.title}</p>
+                  <div
+                    key={todo.id}
+                    className="flex items-center justify-between gap-2 rounded-md p-1 transition-colors hover:bg-muted/40"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            await toggleTodo(todo.id, true);
+                            toast.success(`${t.todoCompleted}: ${todo.title}`);
+                            window.dispatchEvent(new Event("dn-todos-changed"));
+                          } catch (err) {
+                            toast.error(String(err));
+                          }
+                        }}
+                        className="flex size-4 shrink-0 items-center justify-center rounded border border-muted-foreground/40 hover:border-primary hover:bg-primary/20"
+                        title={t.todoCompleted}
+                      >
+                        <Check className="size-2.5 text-muted-foreground hover:text-primary" />
+                      </button>
+                      <p className="truncate text-sm">{todo.title}</p>
+                    </div>
                     <Badge variant="outline" className="shrink-0 text-[10px] capitalize">
                       {todo.priority}
                     </Badge>

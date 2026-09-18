@@ -47,7 +47,7 @@ import {
   type ClipboardKind,
 } from "@/lib/clipboard-history";
 
-type Filter = "all" | ClipboardKind;
+type Filter = "all" | ClipboardKind | "pinned";
 type TransformKind = "upper" | "lower" | "title" | "json" | "trim";
 
 function toTitleCase(text: string) {
@@ -128,7 +128,11 @@ export function ClipboardCard() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((item) => {
-      if (filter !== "all" && item.kind !== filter) return false;
+      if (filter === "pinned") {
+        if (item.pinned !== 1) return false;
+      } else if (filter !== "all" && item.kind !== filter) {
+        return false;
+      }
       if (!q) return true;
       if (item.kind === "image") {
         return `${item.width}x${item.height}`.includes(q) || item.mime?.toLowerCase().includes(q);
@@ -298,6 +302,7 @@ export function ClipboardCard() {
             {(
               [
                 ["all", t.clipboardFilterAll],
+                ["pinned", t.filterPinned],
                 ["text", t.clipboardFilterText],
                 ["image", t.clipboardFilterImage],
               ] as const
@@ -309,6 +314,7 @@ export function ClipboardCard() {
                 className="h-7 px-2.5 text-xs"
                 onClick={() => setFilter(key)}
               >
+                {key === "pinned" && <Pin className="mr-1 size-3 text-primary" />}
                 {key === "text" && <Type className="mr-1 size-3" />}
                 {key === "image" && <ImageIcon className="mr-1 size-3" />}
                 {label}

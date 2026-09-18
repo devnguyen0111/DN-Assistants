@@ -21,6 +21,7 @@ export function useDesktopHotkeys(options: Options = {}) {
     return () => {
       void unregisterAllGlobalHotkeys();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, settings.hotkeyToggleWindow, settings.hotkeyClipboard, settings.hotkeyScratchpad]);
 
   useEffect(() => {

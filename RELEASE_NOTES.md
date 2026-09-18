@@ -1,3 +1,108 @@
+# DN Assistant 0.4.0 - The Pro Power Suite Update 🚀
+
+## Tiếng Việt (Vietnamese)
+
+Phiên bản **0.4.0** mang đến bước chuyển mình mạnh mẽ của **DN Assistant** với phân hệ tiện ích chuyên nghiệp độc quyền, bổ sung hàng loạt công cụ mạnh mẽ dành cho người dùng máy tính để bàn (Power Users), cùng với việc nâng cấp trải nghiệm ghi chú, tính toán khoa học và tối ưu hóa hệ thống.
+
+### 🌟 Tính năng mới & Cải tiến nổi bật:
+
+1. **Phân hệ Đổi Tên Tệp Hàng Loạt Chuyên Nghiệp (Batch File Renamer Pro)**:
+   - Tích hợp trực tiếp vào phân hệ Công cụ Tệp (`FileToolsCard`).
+   - Hỗ trợ chọn hoặc kéo thả hàng loạt tệp tin cùng lúc.
+   - Các luật đổi tên đa dạng: **Tìm kiếm & Thay thế** (chuỗi ký tự hoặc Regular Expression, tùy chọn phân biệt hoa thường), **Thêm Tiền tố & Hậu tố**, **Đánh số thứ tự tự động** (tùy chỉnh số bắt đầu, bước nhảy, số chữ số 0 đệm `01`, `001`, vị trí chèn), **Chuyển đổi kiểu chữ** (lowercase, UPPERCASE, Title Case, camelCase, kebab-case, snake_case), và **Quản lý đuôi tệp**.
+   - Bảng so sánh trực quan thời gian thực (Live Side-by-Side Matrix) hiển thị ngay tên gốc, kích thước và tên mới dự kiến kèm cảnh báo trùng tên (collision detection).
+   - Xuất kịch bản đổi tên tự động: Tải file script PowerShell (`.ps1`) hoặc Windows Batch (`.bat`) để thực thi đổi tên an toàn 100% chỉ với 1 cú click.
+
+2. **Trình Quét & Giải Mã Mã QR / Barcode Thông Minh (Smart QR & Barcode Scanner)**:
+   - Giải mã mã QR và mã vạch 100% ngoại tuyến (offline), bảo mật tuyệt đối dữ liệu.
+   - Hỗ trợ kéo thả ảnh, chọn file ảnh hoặc **dán trực tiếp từ clipboard (`Ctrl+V`)** (tiện lợi cho ảnh chụp màn hình `Win + Shift + S`).
+   - Bộ phân tích cú pháp thông minh tự động bóc tách:
+     - **Mạng WiFi**: Hiển thị SSID, chuẩn mã hóa và nút sao chép mật khẩu WiFi.
+     - **Mã xác thực 2FA (`otpauth://`)**: Trích xuất Issuer, Tên tài khoản, Secret Key kèm nút **"Lưu vào Kho Mật khẩu (Vault)"** chỉ với 1 thao tác.
+     - **Liên kết Web**: Nút mở thẳng trình duyệt và sao chép.
+     - **Văn bản / Dữ liệu thanh toán**: Sao chép nội dung nhanh chóng.
+
+3. **Nâng Cấp Máy Tính Khoa Học, Đơn Vị Mở Rộng & Bộ Tiện Ích Tài Chính (Scientific & Finance Suite)**:
+   - **Chế độ Máy tính Khoa học (Scientific Mode)**: Bổ sung bảng hàm toán học nâng cao: `sin`, `cos`, `tan`, `log`, `ln`, `√` (căn bậc 2), `x²`, `x³`, `xʸ`, `1/x`, `|x|`, hằng số `π`, `e`, dấu ngoặc `(` và `)`.
+   - **Mở rộng Bộ Chuyển Đổi Đơn Vị**: Bổ sung thêm 3 nhóm đơn vị phổ biến:
+     - **Tốc độ (Speed)**: km/h, m/s, mph, knot, mach.
+     - **Diện tích (Area)**: m², km², ha, ft², acre.
+     - **Thể tích (Volume)**: L, mL, m³, gal, fl oz, cup.
+   - **Phân hệ Tài chính & Mua sắm (Finance & Shopping Utilities)**:
+     - **Chia hóa đơn & Tiền Tip (Bill Splitter)**: Tính tổng tiền, % tip tùy chọn (0%, 5%, 10%, 15%, 20%), số người chia, hiển thị tiền tip và số tiền mỗi người phải thanh toán.
+     - **Tính giá giảm & Tiết kiệm (Discount Calculator)**: Nhập giá gốc và % giảm giá, hiển thị số tiền tiết kiệm và giá sau giảm.
+
+4. **Trình Ghi Chú Đẳng Cấp Pro (Pro Markdown Notebook)**:
+   - Thanh công cụ định dạng Markdown nhanh: Đậm, Nghiêng, Tiêu đề 3, Khối mã, Trích dẫn, Danh sách gạch đầu dòng, Hộp kiểm công việc `- [ ]`, Bảng Markdown, Đường phân cách.
+   - Thống kê trực tiếp số từ (words), số ký tự (chars) trên đầu ghi chú.
+   - Trạng thái lưu trữ trực quan: Hiển thị huy hiệu "Đã lưu" hoặc "Chưa lưu" theo thời gian thực.
+   - Xuất bản ghi chú: Nút "Tải file .md" và nút "Sao chép Markdown" tiện lợi.
+
+5. **Thao Tác Việc Cần Làm Siêu Tốc Từ Command Palette (`Ctrl+K`) & Nâng Cấp Todo**:
+   - Thêm việc cần làm tức thì: Gõ `todo: <nội dung>` hoặc `+ <nội dung>` trong thanh tìm kiếm toàn cục `Ctrl+K` và bấm Enter để lưu ngay Todo mà không cần rời màn hình làm việc!
+   - Hiển thị danh sách Todo đang mở trong Command Palette với ô hoàn thành nhanh.
+   - Bổ sung bộ lọc trong phân hệ Todo: *Tất cả (All)*, *Đang làm (Active)*, *Đến hạn (Due / Today)*, *Đã xong (Completed)*.
+   - Tính năng "Dọn dẹp các việc đã hoàn thành" (Clear Completed) với hộp thoại xác nhận.
+   - Nút tick hoàn thành Todo nhanh ngay trên thẻ Bento ở Trang Chủ (Dashboard).
+
+6. **Lọc Mục Đã Ghim Trong Lịch Sử Clipboard (`ClipboardCard`)**:
+   - Bổ sung bộ lọc "Đã ghim" (`Pinned`) giúp xem lại ngay các nội dung quan trọng đã ghim.
+
+7. **Sửa Lỗi & Tối Ưu Hóa React Hook Dependencies**:
+   - Khắc phục các cảnh báo thiếu dependencies trong `CalendarCard`, `NotesCard`, `ClockCard` và `useDesktopHotkeys`.
+
+---
+
+## English
+
+Release **0.4.0** marks a major leap forward for **DN Assistant**, delivering an exclusive productivity power suite for desktop users, featuring offline QR/Barcode intelligence, batch renaming, scientific and financial calculations, enhanced markdown editing, and seamless global todo integration.
+
+### 🌟 Key Highlights & Enhancements:
+
+1. **Batch File Renamer Pro**:
+   - Integrated into the File Tools suite (`FileToolsCard`).
+   - Drag & drop or select dozens/hundreds of files simultaneously.
+   - Flexible rename rules: **Find & Replace** (substrings or RegEx with case-sensitivity), **Prefix & Suffix**, **Auto-Numbering Sequence** (start, step, zero-padding `01`, `001`, placement), **Case Transformation** (lower, upper, title, camel, kebab, snake), and **Extension Handling**.
+   - Real-time side-by-side comparison table with duplicate name collision warnings.
+   - 1-Click script export: generate executable PowerShell (`.ps1`) or Windows Command Prompt Batch (`.bat`) scripts.
+
+2. **Smart QR & Barcode Scanner**:
+   - 100% offline, zero-network scanning powered by pure JavaScript `jsqr`.
+   - Drop image or press **Ctrl+V** anywhere to paste screenshots from clipboard.
+   - Intelligent payload inspection:
+     - **WiFi Networks**: Displays SSID, encryption, and instant password copy.
+     - **2FA Tokens (`otpauth://`)**: Extracts issuer, account, secret with 1-click **Save to Password Vault**.
+     - **Web URLs**: Direct browser launch and copy.
+     - **Text / Barcodes**: Instant copy and inspection.
+
+3. **Scientific Calculator, Expanded Units & Finance Suite**:
+   - **Scientific Calculator Mode**: Advanced mathematical functions: `sin`, `cos`, `tan`, `log`, `ln`, `√`, `x²`, `x³`, `xʸ`, `1/x`, `|x|`, `π`, `e`, `(`, `)`.
+   - **Expanded Unit Converters**: Added **Speed** (km/h, m/s, mph, knot, mach), **Area** (m², km², ha, ft², acre), and **Volume** (L, mL, m³, gal, fl oz, cup).
+   - **Finance & Shopping Utilities**:
+     - **Bill Splitter & Tip**: Calculate tip percentage, bill total, and per-person breakdown.
+     - **Discount Calculator**: Computes discount savings and net payable price.
+
+4. **Pro Markdown Notebook**:
+   - Markdown quick formatting toolbar (Bold, Italic, Heading, Code Block, Quote, Lists, Checklist `- [ ]`, Table, Divider).
+   - Live word and character count metrics.
+   - Visual save state badge ("Saved" vs "Unsaved edits").
+   - 1-Click note export: Download `.md` file or copy raw Markdown.
+
+5. **Instant Todo in Command Palette (`Ctrl+K`) & Todo Enhancements**:
+   - Quick Todo creation: type `todo: <task>` or `+ <task>` in `Ctrl+K` and press Enter to save immediately without leaving your workspace.
+   - Search and complete active todos directly within Command Palette.
+   - Filter tabs in Todo view: All, Active, Due / Today, Completed.
+   - Clear all completed todos action with confirmation.
+   - Interactive 1-click completion checkbox directly on the Dashboard Bento Todo card.
+
+6. **Pinned Filter in Clipboard History**:
+   - Added dedicated "Pinned" tab to quickly access all your favorite text and image clips.
+
+7. **React Hook Cleanups & Bug Fixes**:
+   - Resolved all dependency warnings in `CalendarCard`, `NotesCard`, `ClockCard`, and `useDesktopHotkeys`.
+
+---
+
 # DN Assistant 0.3.2 - The Performance & Experience Engine Update ⚡
 
 ## Tiếng Việt (Vietnamese)

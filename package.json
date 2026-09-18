@@ -1,7 +1,7 @@
 {
   "name": "dn-assistant",
   "private": true,
-  "version": "0.3.2",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -50,6 +50,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.44.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",

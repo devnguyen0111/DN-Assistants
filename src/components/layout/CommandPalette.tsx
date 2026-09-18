@@ -38,6 +38,7 @@ import { evaluate, formatResult } from "@/lib/calculator";
 import { convertCurrency, formatConverted, parseCurrencyQuery } from "@/lib/currency";
 import { listEvents, type CalendarEvent } from "@/lib/events";
 import { createNote, searchNotes, type Note } from "@/lib/notes";
+import { createTodo, listTodos, toggleTodo, type Todo } from "@/lib/todos";
 import { expandPlaceholders, searchSnippets, type Snippet } from "@/lib/snippets";
 import { localeTag, useI18n } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
@@ -115,6 +116,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [fxResult, setFxResult] = useState<string | null>(null);
 
   useEffect(() => {
@@ -122,11 +124,15 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
       setQuery("");
       setFxResult(null);
       setSnippets([]);
+      setTodos([]);
       return;
     }
     void listEvents()
       .then(setEvents)
       .catch(() => setEvents([]));
+    void listTodos()
+      .then((items) => setTodos(items.filter((x) => x.done === 0)))
+      .catch(() => setTodos([]));
   }, [open]);
 
   useEffect(() => {
@@ -188,6 +194,23 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
       .slice(0, 8);
   }, [events, query]);
 
+  const todoQuery = useMemo(() => {
+    const q = query.trim();
+    if (/^todo:\s*/i.test(q)) {
+      return q.replace(/^todo:\s*/i, "").trim();
+    }
+    if (/^\+\s+/i.test(q)) {
+      return q.replace(/^\+\s+/i, "").trim();
+    }
+    return null;
+  }, [query]);
+
+  const matchingTodos = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || todoQuery) return [];
+    return todos.filter((t) => t.title.toLowerCase().includes(q));
+  }, [todos, query, todoQuery]);
+
   const vaultUnlocked = isVaultUnlocked();
   const vaultMatches = useMemo(() => {
     if (!open) return [];
@@ -233,6 +256,56 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
               <Coins className="size-4" />
               <span className="font-mono tabular-nums">{fxResult}</span>
             </CommandItem>
+          </CommandGroup>
+        )}
+
+        {todoQuery && (
+          <CommandGroup heading={t.todoTitle}>
+            <CommandItem
+              value={`create-todo-${todoQuery}`}
+              onSelect={async () => {
+                try {
+                  await createTodo({ title: todoQuery, priority: "medium" });
+                  toast.success(`${t.saved}: ${todoQuery}`);
+                  window.dispatchEvent(new Event("dn-todos-changed"));
+                  onOpenChange(false);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : String(err));
+                }
+              }}
+            >
+              <CheckSquare className="size-4 text-primary" />
+              <span className="font-medium">
+                {t.todoAdd}: <span className="text-primary font-semibold">{todoQuery}</span>
+              </span>
+            </CommandItem>
+          </CommandGroup>
+        )}
+
+        {matchingTodos.length > 0 && (
+          <CommandGroup heading={t.todoTitle}>
+            {matchingTodos.map((todo) => (
+              <CommandItem
+                key={todo.id}
+                value={`todo-${todo.id}-${todo.title}`}
+                onSelect={async () => {
+                  try {
+                    await toggleTodo(todo.id, true);
+                    toast.success(`${t.todoCompleted}: ${todo.title}`);
+                    window.dispatchEvent(new Event("dn-todos-changed"));
+                    setTodos((prev) => prev.filter((item) => item.id !== todo.id));
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : String(err));
+                  }
+                }}
+              >
+                <CheckSquare className="size-4 text-muted-foreground" />
+                <span className="flex-1 truncate">{todo.title}</span>
+                <Badge variant="outline" className="text-[10px] capitalize">
+                  {todo.priority}
+                </Badge>
+              </CommandItem>
+            ))}
           </CommandGroup>
         )}
 
