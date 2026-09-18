@@ -30,4 +30,27 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("react/") || id.includes("react-dom/")) {
+              return "vendor-react";
+            }
+            if (id.includes("@radix-ui/")) {
+              return "vendor-radix";
+            }
+            if (id.includes("@tauri-apps/")) {
+              return "vendor-tauri";
+            }
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
+            }
+          }
+        },
+      },
+    },
+  },
 }));

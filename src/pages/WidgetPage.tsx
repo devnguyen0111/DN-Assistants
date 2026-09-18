@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Cpu, FileText, StickyNote, Timer, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,24 @@ export function WidgetPage({ kind }: Props) {
   const [now, setNow] = useState(() => new Date());
   const { stats } = useSystemStats(kind === "cpu" ? 2000 : 10_000);
   const [remaining, setRemaining] = useState(0);
+
+  // Local debounced scratchpad state
+  const [scratchText, setScratchText] = useState(settings.scratchpad);
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setScratchText(settings.scratchpad);
+  }, [settings.scratchpad]);
+
+  const onScratchChange = (val: string) => {
+    setScratchText(val);
+    if (debounceRef.current != null) {
+      window.clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = window.setTimeout(() => {
+      void updateSettings({ scratchpad: val });
+    }, 400);
+  };
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);
@@ -62,7 +80,7 @@ export function WidgetPage({ kind }: Props) {
 
   const copySticky = async () => {
     try {
-      await navigator.clipboard.writeText(settings.scratchpad);
+      await navigator.clipboard.writeText(scratchText);
       toast.success(t.copied);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -70,7 +88,7 @@ export function WidgetPage({ kind }: Props) {
   };
 
   const saveStickyAsNote = async () => {
-    const body = settings.scratchpad.trim();
+    const body = scratchText.trim();
     if (!body) return;
     try {
       await createNote({
@@ -160,8 +178,8 @@ export function WidgetPage({ kind }: Props) {
       {kind === "sticky" && (
         <div className="flex flex-1 flex-col pt-1">
           <Textarea
-            value={settings.scratchpad}
-            onChange={(e) => void updateSettings({ scratchpad: e.target.value })}
+            value={scratchText}
+            onChange={(e) => onScratchChange(e.target.value)}
             placeholder={t.stickyPlaceholder}
             className="h-full resize-none border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 leading-relaxed font-mono"
           />

@@ -76,11 +76,24 @@ export async function searchCities(query: string, language = "en"): Promise<Weat
   }));
 }
 
+const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+type CachedWeather = {
+  data: WeatherPayload;
+  timestamp: number;
+};
+const weatherCache = new Map<string, CachedWeather>();
+
 export async function fetchWeather(
   latitude: number,
   longitude: number,
   temperatureUnit: "celsius" | "fahrenheit" = "celsius",
 ): Promise<WeatherPayload> {
+  const cacheKey = `${latitude.toFixed(3)}:${longitude.toFixed(3)}:${temperatureUnit}`;
+  const cached = weatherCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < WEATHER_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(latitude));
   url.searchParams.set("longitude", String(longitude));
@@ -106,7 +119,7 @@ export async function fetchWeather(
     tempMin: data.daily!.temperature_2m_min[i] ?? 0,
   }));
 
-  return {
+  const payload: WeatherPayload = {
     timezone: data.timezone ?? "auto",
     current: {
       temperature: data.current.temperature_2m,
@@ -118,6 +131,9 @@ export async function fetchWeather(
     },
     daily,
   };
+
+  weatherCache.set(cacheKey, { data: payload, timestamp: Date.now() });
+  return payload;
 }
 
 /** WMO weather interpretation codes → short label keys we map in UI. */

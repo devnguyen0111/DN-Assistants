@@ -70,7 +70,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 export const ACCENT_OPTIONS: AccentColor[] = ["teal", "blue", "violet", "rose", "amber", "emerald"];
 
-export const APP_VERSION = "0.3.1";
+export const APP_VERSION = "0.3.2";
 
 const LS_KEY = "dn-assistant-settings";
 const STORE_FILE = "settings.json";
@@ -150,18 +150,48 @@ async function applyAlwaysOnTop(enabled: boolean) {
   }
 }
 
-export async function saveSettings(partial: Partial<AppSettings>): Promise<AppSettings> {
-  const next = { ...loadSettingsSync(), ...sanitize(partial) };
-  writeLocal(next);
+let storeSaveTimer: number | null = null;
+let pendingStoreSettings: AppSettings | null = null;
+
+async function flushStoreSave() {
+  if (storeSaveTimer != null) {
+    window.clearTimeout(storeSaveTimer);
+    storeSaveTimer = null;
+  }
+  if (!pendingStoreSettings) return;
+  const toSave = pendingStoreSettings;
+  pendingStoreSettings = null;
   try {
     const store = await getStore();
     if (store) {
-      await store.set("app", next);
+      await store.set("app", toSave);
       await store.save();
     }
   } catch {
     // browser / plugin unavailable
   }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    void flushStoreSave();
+  });
+}
+
+function queueStoreSave(settings: AppSettings) {
+  pendingStoreSettings = settings;
+  if (storeSaveTimer != null) {
+    window.clearTimeout(storeSaveTimer);
+  }
+  storeSaveTimer = window.setTimeout(() => {
+    void flushStoreSave();
+  }, 350);
+}
+
+export async function saveSettings(partial: Partial<AppSettings>): Promise<AppSettings> {
+  const next = { ...loadSettingsSync(), ...sanitize(partial) };
+  writeLocal(next);
+  queueStoreSave(next);
   if (partial.closeToTray !== undefined) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");

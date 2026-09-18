@@ -43,9 +43,6 @@ import {
   listClipboardItems,
   pinItem,
   unpinItem,
-  upsertClipboardImage,
-  upsertClipboardItem,
-  type ClipboardChangedPayload,
   type ClipboardItem,
   type ClipboardKind,
 } from "@/lib/clipboard-history";
@@ -127,31 +124,6 @@ export function ClipboardCard() {
     window.addEventListener("dn-clipboard-changed", onChanged);
     return () => window.removeEventListener("dn-clipboard-changed", onChanged);
   }, []);
-
-  useEffect(() => {
-    if (!settings.clipboardHistoryEnabled) return;
-    let unlisten: (() => void) | undefined;
-    void (async () => {
-      try {
-        const { listen } = await import("@tauri-apps/api/event");
-        unlisten = await listen<ClipboardChangedPayload | string>("clipboard-changed", (event) => {
-          const payload = event.payload;
-          if (typeof payload === "string") {
-            void upsertClipboardItem(payload);
-            return;
-          }
-          if (payload.kind === "image") {
-            void upsertClipboardImage(payload);
-          } else {
-            void upsertClipboardItem(payload.content);
-          }
-        });
-      } catch {
-        // Tauri event API unavailable (browser preview)
-      }
-    })();
-    return () => unlisten?.();
-  }, [settings.clipboardHistoryEnabled]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

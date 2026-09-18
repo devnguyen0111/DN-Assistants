@@ -30,11 +30,12 @@ function shouldNotify(item: TikTokStreak, kind: "remind" | "nudge", now: Date): 
   return currentMinutes(now) >= target;
 }
 
-export function useTikTokStreakReminders() {
+export function useTikTokStreakReminders(enabled = true) {
   const { t } = useI18n();
   const itemsRef = useRef<TikTokStreak[]>([]);
 
   useEffect(() => {
+    if (!enabled) return;
     pruneFiredKeys();
     let cancelled = false;
 
@@ -48,7 +49,7 @@ export function useTikTokStreakReminders() {
     };
 
     void load();
-    const reloadId = window.setInterval(() => void load(), 15_000);
+    const reloadId = window.setInterval(() => void load(), 60_000);
     const onChanged = () => void load();
     window.addEventListener("focus", onChanged);
     window.addEventListener("dn-tiktok-streaks-changed", onChanged);
@@ -82,5 +83,5 @@ export function useTikTokStreakReminders() {
       window.removeEventListener("focus", onChanged);
       window.removeEventListener("dn-tiktok-streaks-changed", onChanged);
     };
-  }, [t]);
+  }, [enabled, t]);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarClock,
   Check,
@@ -47,11 +47,63 @@ function greetingKey(hour: number): "greetingMorning" | "greetingAfternoon" | "g
   return "greetingEvening";
 }
 
+function HomeClockCard({ onNavigate }: Props) {
+  const { locale, t } = useI18n();
+  const tag = localeTag(locale);
+  const { settings } = useSettings();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const primary = useMemo(
+    () => zonedParts(now, settings.primaryTimezone),
+    [now, settings.primaryTimezone],
+  );
+
+  return (
+    <BentoItem>
+      <Card
+        className="h-full cursor-pointer transition-colors hover:bg-accent/30"
+        onClick={() => onNavigate("clock")}
+      >
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <Clock3 className="size-4 text-primary" />
+            {t.clock}
+          </CardTitle>
+          <Badge variant="secondary" className="font-mono text-[10px]">
+            {settings.primaryTimezone}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <p className="font-mono text-4xl font-semibold tabular-nums tracking-tight">
+            {pad2(Number(primary.hours))}:{pad2(Number(primary.minutes))}
+            <span className="text-2xl text-muted-foreground">
+              :{pad2(Number(primary.seconds))}
+            </span>
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {new Intl.DateTimeFormat(tag, {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+              timeZone: settings.primaryTimezone,
+            }).format(now)}
+          </p>
+        </CardContent>
+      </Card>
+    </BentoItem>
+  );
+}
+
 export function HomePage({ onNavigate }: Props) {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
   const { settings, updateSettings } = useSettings();
-  const [now, setNow] = useState(() => new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
@@ -61,10 +113,23 @@ export function HomePage({ onNavigate }: Props) {
   const [habits, setHabits] = useState<HabitStats[]>([]);
   const { stats } = useSystemStats(3000);
 
+  // Local scratchpad state with debounce to prevent typing lag and disk thrashing
+  const [scratchText, setScratchText] = useState(settings.scratchpad);
+  const scratchDebounceRef = useRef<number | null>(null);
+
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
+    setScratchText(settings.scratchpad);
+  }, [settings.scratchpad]);
+
+  const onScratchChange = (val: string) => {
+    setScratchText(val);
+    if (scratchDebounceRef.current != null) {
+      window.clearTimeout(scratchDebounceRef.current);
+    }
+    scratchDebounceRef.current = window.setTimeout(() => {
+      void updateSettings({ scratchpad: val });
+    }, 400);
+  };
 
   const loadHabits = () => {
     void getAllHabitsWithStats()
@@ -96,30 +161,39 @@ export function HomePage({ onNavigate }: Props) {
     return () => window.removeEventListener("dn-habits-changed", habitHandler);
   }, []);
 
-  const primary = useMemo(
-    () => zonedParts(now, settings.primaryTimezone),
-    [now, settings.primaryTimezone],
-  );
-
   const ramPct =
     stats && stats.memory.total > 0 ? (stats.memory.used / stats.memory.total) * 100 : 0;
 
-  const greet = t[greetingKey(Number(primary.hours))];
+  const currentHour = new Date().getHours();
+  const greet = t[greetingKey(currentHour)];
 
   const saveScratch = async () => {
-    const body = settings.scratchpad.trim();
+    const body = scratchText.trim();
     if (!body) return;
     try {
       await createNote({
         title: body.split("\n")[0]?.slice(0, 60) || t.homeScratchpad,
         body,
       });
+      setScratchText("");
+      if (scratchDebounceRef.current != null) {
+        window.clearTimeout(scratchDebounceRef.current);
+      }
       await updateSettings({ scratchpad: "" });
       toast.success(t.saved);
       onNavigate("notes");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
+  };
+
+  const clearScratch = async () => {
+    setScratchText("");
+    if (scratchDebounceRef.current != null) {
+      window.clearTimeout(scratchDebounceRef.current);
+      scratchDebounceRef.current = null;
+    }
+    await updateSettings({ scratchpad: "" });
   };
 
   return (
@@ -207,7 +281,7 @@ export function HomePage({ onNavigate }: Props) {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => void updateSettings({ scratchpad: "" })}
+                  onClick={() => void clearScratch()}
                 >
                   {t.homeScratchpadClear}
                 </Button>
@@ -217,8 +291,8 @@ export function HomePage({ onNavigate }: Props) {
               <p className="mb-2 text-xs text-muted-foreground">{t.homeScratchpadHint}</p>
               <Textarea
                 id="dn-scratchpad"
-                value={settings.scratchpad}
-                onChange={(e) => void updateSettings({ scratchpad: e.target.value })}
+                value={scratchText}
+                onChange={(e) => onScratchChange(e.target.value)}
                 placeholder={t.noteBodyPlaceholder}
                 className="min-h-24"
               />
@@ -226,39 +300,7 @@ export function HomePage({ onNavigate }: Props) {
           </Card>
         </BentoItem>
 
-        <BentoItem>
-          <Card
-            className="h-full cursor-pointer transition-colors hover:bg-accent/30"
-            onClick={() => onNavigate("clock")}
-          >
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="flex items-center gap-2">
-                <Clock3 className="size-4 text-primary" />
-                {t.clock}
-              </CardTitle>
-              <Badge variant="secondary" className="font-mono text-[10px]">
-                {settings.primaryTimezone}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <p className="font-mono text-4xl font-semibold tabular-nums tracking-tight">
-                {pad2(Number(primary.hours))}:{pad2(Number(primary.minutes))}
-                <span className="text-2xl text-muted-foreground">
-                  :{pad2(Number(primary.seconds))}
-                </span>
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {new Intl.DateTimeFormat(tag, {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                  timeZone: settings.primaryTimezone,
-                }).format(now)}
-              </p>
-            </CardContent>
-          </Card>
-        </BentoItem>
+        <HomeClockCard onNavigate={onNavigate} />
 
         <BentoItem>
           <Card className="h-full">

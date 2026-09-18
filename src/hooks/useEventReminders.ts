@@ -43,12 +43,13 @@ function shouldFire(event: CalendarEvent, now: number, bootMinute: number): bool
   return !hasFired(key);
 }
 
-export function useEventReminders() {
+export function useEventReminders(enabled = true) {
   const { t } = useI18n();
   const bootMinute = useRef(minuteKey(Date.now()));
   const eventsRef = useRef<CalendarEvent[]>([]);
 
   useEffect(() => {
+    if (!enabled) return;
     pruneFiredKeys();
     let cancelled = false;
 
@@ -62,7 +63,7 @@ export function useEventReminders() {
     };
 
     void load();
-    const reloadId = window.setInterval(() => void load(), 5_000);
+    const reloadId = window.setInterval(() => void load(), 60_000);
     const onFocus = () => void load();
     window.addEventListener("focus", onFocus);
     window.addEventListener("dn-events-changed", onFocus);
@@ -93,5 +94,5 @@ export function useEventReminders() {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("dn-events-changed", onFocus);
     };
-  }, [t]);
+  }, [enabled, t]);
 }

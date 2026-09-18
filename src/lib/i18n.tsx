@@ -512,9 +512,9 @@ const dictionaries = {
     aboutPrivacyBody:
       "Notes, todos, events, and focus sessions live in a local SQLite database. The password vault is encrypted with AES-GCM under your master password. Clipboard history is off by default. TikTok streak tools only remind you locally — they never log in or send messages. Optional encrypted backups (.dnbackup) are protected by a separate backup password.",
     aboutShortcutsTitle: "Keyboard shortcuts",
-    aboutChangelogTitle: "What's new in 0.3.1",
+    aboutChangelogTitle: "What's new in 0.3.2",
     aboutChangelogBody:
-      "v0.3.1 delivers major upgrades for Currency & Dev Tools: Multi-currency watchlist & live comparison, international card/bank fee & spread calculator, quick presets, JSON to TypeScript interface generator, JSON minify & escape tools, Base64 image preview & download, URL Inspector with interactive query parameter editor, JWT status & expiry countdown, MD5 & HMAC security, and new Web Utilities (HTML entities, CSS units, text cases, and Lorem Ipsum).",
+      "v0.3.2 delivers massive performance and UX optimizations: Initial bundle size slashed by 77.5% (from 1.12 MB to 252 kB) via React code-splitting and vendor chunking, 96.5% smaller logo assets, instantaneous widget load times (4 kB), global clipboard history tracking across all pages, eliminated idle 1-second re-renders on Dashboard with isolated Clock card, 400ms debounced scratchpad with zero typing latency, 10-minute in-memory Weather cache, throttled auto-lock mouse activity, and GPU-accelerated page transitions.",
     aboutTechTitle: "Technical details",
     aboutReplayOnboarding: "Replay welcome tour",
     aboutShowWhatsNew: "What's new",
@@ -637,7 +637,7 @@ const dictionaries = {
     morningBrief: "Morning brief",
     morningBriefHint: "Notify agenda and due todos once in the morning",
     restoreLastRoute: "Open last page on launch",
-    whatsNewTitle: "What's new in 0.3.1",
+    whatsNewTitle: "What's new in 0.3.2",
     whatsNewDismiss: "Got it",
     commandNotes: "Notes",
     commandScratchSave: "Save scratch pad as note",
@@ -1240,9 +1240,9 @@ const dictionaries = {
     aboutPrivacyBody:
       "Ghi chú, việc, sự kiện và phiên focus nằm trong SQLite cục bộ. Kho mật khẩu mã hóa AES-GCM bằng mật khẩu chính. Lịch sử clipboard tắt mặc định. Công cụ chuỗi TikTok chỉ nhắc trên máy — không đăng nhập hay gửi tin. Sao lưu mã hóa (.dnbackup) được bảo vệ bằng mật khẩu backup riêng.",
     aboutShortcutsTitle: "Phím tắt",
-    aboutChangelogTitle: "Có gì mới ở 0.3.1",
+    aboutChangelogTitle: "Có gì mới ở 0.3.2",
     aboutChangelogBody:
-      "v0.3.1 mang đến nâng cấp toàn diện cho Tiền tệ & Công cụ lập trình: Bảng theo dõi đa tiền tệ (Watchlist), Công cụ tính phí thẻ tín dụng & chênh lệch ngân hàng, Phím số tiền nhanh, Trình sinh TypeScript Interface từ JSON, Nén & Escape JSON, Xem trước & tải ảnh Base64, Trình phân tích URL & bảng chỉnh sửa query parameters trực tiếp, Giám sát trạng thái JWT & đếm ngược hạn dùng, Thuật toán MD5 & HMAC, và Tab Tiện ích Web mới (Thực thể HTML, Đơn vị CSS, Đổi kiểu chữ, Lorem Ipsum).",
+      "v0.3.2 mang đến bản nâng cấp toàn diện về hiệu năng & trải nghiệm người dùng: Giảm 77.5% dung lượng tải khởi đầu (từ 1.12 MB xuống 252 kB) nhờ React code-splitting và chia tách vendor chunks, giảm 96.5% dung lượng logo, mở widget nổi siêu tốc (chỉ 4 kB), bắt lịch sử clipboard toàn cục ở mọi trang trong ứng dụng, triệt tiêu render lặp mỗi giây trên Dashboard với đồng hồ cô lập, gõ Scratchpad mượt mà với debounce 400ms và bộ đệm đĩa, cache thời tiết 10 phút chuyển tab tức thì, và hiệu ứng chuyển trang tăng tốc bằng GPU.",
     aboutTechTitle: "Thông tin kỹ thuật",
     aboutReplayOnboarding: "Xem lại hướng dẫn",
     aboutShowWhatsNew: "Có gì mới",
@@ -1352,7 +1352,7 @@ const dictionaries = {
     morningBrief: "Tóm tắt buổi sáng",
     morningBriefHint: "Thông báo lịch và việc đến hạn một lần vào buổi sáng",
     restoreLastRoute: "Mở trang cuối khi khởi động",
-    whatsNewTitle: "Có gì mới ở 0.3.1",
+    whatsNewTitle: "Có gì mới ở 0.3.2",
     whatsNewDismiss: "Đã hiểu",
     commandNotes: "Ghi chú",
     commandScratchSave: "Lưu ghi chú tạm thành note",
