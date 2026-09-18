@@ -70,7 +70,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 export const ACCENT_OPTIONS: AccentColor[] = ["teal", "blue", "violet", "rose", "amber", "emerald"];
 
-export const APP_VERSION = "0.3.0";
+export const APP_VERSION = "0.3.1";
 
 const LS_KEY = "dn-assistant-settings";
 const STORE_FILE = "settings.json";

@@ -2,10 +2,12 @@
 
 Desktop utility app built with **Tauri 2**, **React 19**, **shadcn/ui**, **Lucide**, and **Anime.js**.
 
-**Version 0.3.0**
+**Version 0.3.1**
 
 ## Features
 
+- **Advanced Currency Suite**: Searchable currency picker with flags & symbols, multi-currency watchlist comparison table, international card/bank fee & spread calculator, and quick conversion reference matrix
+- **Comprehensive DevTools Suite**: JSON formatting/minifying, JSON to TypeScript interface generator, Base64 text & image/file preview/download, URL Inspector with interactive query parameter editor, JWT status & expiry countdown, MD5 & HMAC security, UUID batch & NanoID generation, WiFi QR code generator, regex tester with replace & presets, timestamp & world timezones, and text/code utilities
 - Home dashboard with greeting, quick actions, scratch pad, favorites, clock, agenda, system snapshot, weather, todos, notes, TikTok streaks, and daily habit check-ins
 - Multi-page shell with grouped sidebar + pin-to-favorites, page-aware header, density modes, bilingual vi/en
 - First-run onboarding and What's New dialog after updates

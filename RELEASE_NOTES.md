@@ -1,3 +1,63 @@
+# DN Assistant 0.3.1 - The Currency & Developer Toolkit Update ⚡
+
+## Tiếng Việt (Vietnamese)
+
+Phiên bản **0.3.1** nâng cấp chuyên sâu cho 2 phân hệ công cụ cốt lõi: **Đổi tiền tệ (Currency)** và **Công cụ lập trình (Dev Tools)** với hàng loạt tính năng cao cấp, trực quan và tiện dụng.
+
+### 🌟 Tính năng mới nổi bật:
+
+1. **Phân hệ Đổi tiền tệ (Advanced Currency Suite)**:
+   - **Bộ chọn tiền tệ tìm kiếm thông minh**: Hiển thị cờ quốc gia (🇺🇸, 🇻🇳, 🇪🇺, 🇯🇵,...), ký hiệu tiền tệ ($, ₫, €, ¥,...), mã ISO và tên đầy đủ song ngữ (Việt - Anh).
+   - **Bảng theo dõi đa tiền tệ (Watchlist)**: Quy đổi đồng thời ra 10+ đồng tiền lớn trên thế giới trong một bảng tổng hợp, hỗ trợ thêm/bớt đồng tiền yêu thích.
+   - **Công cụ tính phí & chênh lệch chuyển đổi (Fee & Spread Calculator)**: Tính phí thẻ tín dụng / ngân hàng quốc tế (0%, 1.5%, 2.5%, 3.5% hoặc tùy chỉnh), hiển thị số tiền thực nhận và tỷ giá thực tế sau phí.
+   - **Phím chọn nhanh số tiền**: Thanh bấm số tiền thông minh theo thang mệnh giá (`50k`, `100k`, `500k`, `1M`, `5M`, `10M` hoặc `10`, `50`, `100`, `500`, `1k`), các phím toán học `×10`, `÷10`, `+100k`, `Clear`.
+   - **Bảng quy đổi mốc chuẩn hai chiều**: Tra cứu nhanh 1, 5, 10, 25, 50, 100, 500, 1.000 giữa 2 đồng tiền.
+   - **Nhận diện ngôn ngữ tự nhiên trong Command Palette**: Hỗ trợ ký hiệu (`$100 to vnd`, `€50 to usd`) và số lượng viết tắt (`500k vnd to usd`, `2tr vnd sang jpy`).
+
+2. **Phân hệ Công cụ lập trình (Comprehensive DevTools Suite)**:
+   - **JSON**: Thêm tính năng **Minify JSON**, **JSON to TypeScript Interface / Type Generator**, **Escape / Unescape JSON String**.
+   - **Base64**: Thêm chuyển đổi **File / Ảnh sang Base64 (Data URI)** kèm xem trước ảnh, kích cỡ file và tải ảnh về.
+   - **URL**: Trình **URL Inspector** & **Query Parameters Editor** trực tiếp chỉnh sửa, thêm, xóa tham số và tái tạo link động.
+   - **JWT**: Trình **Token Status** giám sát thời hạn token (Active / Expired với đếm ngược thời gian hết hạn), phân tích Header/Payload/Claims.
+   - **Hash & HMAC**: Thêm thuật toán **MD5** thuần JS tốc độ cao, **SHA-1/256/512**, chế độ **HMAC với Secret Key**, tùy chọn chữ hoa/thường.
+   - **UUID & NanoID**: Sinh UUID v4/v7, **Batch Generator** (sinh 5 - 50 UUID hàng loạt, tùy chọn bỏ gạch ngang, chữ hoa, dấu `{}`), và bộ sinh **NanoID / Short ID**.
+   - **QR Code**: Tải ảnh PNG trực tiếp, bổ sung preset tạo **Mã QR WiFi** (SSID, Password, WPA2) tự động.
+   - **Regex**: Kho **Regex mẫu thông dụng** (Email, URL, IPv4, Phone, Hex, Date,...), tính năng **Regex Replace** với `$1, $2`.
+   - **Time**: Timestamp mili-giây / giây, thời gian tương đối, bảng giờ thế giới (UTC, ICT, JST, GMT, EST, PST).
+   - **Diff**: Giao diện so sánh trực quan, đổi chỗ A ↔ B, bỏ qua khoảng trắng thừa.
+   - **Tab mới - Code & Text Utilities**: Ký tự HTML Entities (Encode/Decode), Đơn vị CSS (px ↔ rem ↔ em ↔ pt), Chuyển đổi kiểu chữ (camelCase, snake_case, PascalCase, CONSTANT_CASE, v.v.), Trình tạo văn bản mẫu Lorem Ipsum.
+
+---
+
+## English
+
+Release **0.3.1** introduces a major upgrade to the **Currency** and **Developer Tools** modules, bringing professional-grade utilities to your desktop.
+
+### 🌟 Key Highlights:
+
+1. **Advanced Currency Suite**:
+   - Searchable currency combobox with national flags, currency symbols, and bilingual names.
+   - Multi-currency comparison watchlist: convert the current amount across 10+ major world currencies simultaneously with local storage persistence.
+   - Fee & Spread Calculator: calculate international credit card / bank exchange fees (0%, 1.5%, 2.5%, 3.5%, or custom %) and view net received amounts with effective exchange rates.
+   - Quick amount preset chips and multiplier actions (`×10`, `÷10`, `+100k`, `Clear`).
+   - Two-way reference matrix for 1, 5, 10, 25, 50, 100, 500, 1,000 units.
+   - Natural language command queries in Command Palette (`$100 to vnd`, `500k vnd to usd`, `2tr vnd to jpy`).
+
+2. **Comprehensive DevTools Suite**:
+   - **JSON**: Minify / compact JSON, JSON to TypeScript interface generator, and escape/unescape string tools.
+   - **Base64**: File and image to Base64 (Data URI) with live image preview and download.
+   - **URL**: Interactive URL inspector and real-time query parameter editor.
+   - **JWT**: Token status inspection with active/expired badges and live expiration countdown.
+   - **Hash & HMAC**: Pure JS MD5 algorithm, SHA-1/256/512, and HMAC generation with secret keys.
+   - **UUID & NanoID**: Batch UUID generation (5-50 IDs with uppercase, no-hyphen, and braces options) plus custom-length NanoID.
+   - **QR Code**: WiFi network presets (SSID, Password, Encryption) and instant high-res PNG download.
+   - **Regex Tester**: Common regex presets library (Email, URL, IP, Phone, Hex, Date, Slug) and regex string replacement.
+   - **Time & Timestamps**: Milliseconds/seconds toggle, friendly local datetime, relative time, and major world timezones preview.
+   - **Diff Viewer**: Side-by-side comparison with swap and whitespace toggle.
+   - **New Utilities Tab**: HTML Entities encoder/decoder, CSS units converter (px/rem/em/pt), text case switcher, and Lorem Ipsum generator.
+
+---
+
 # DN Assistant 0.3.0 - The Productivity Powerhouse Update 🚀
 
 ## Tiếng Việt (Vietnamese)

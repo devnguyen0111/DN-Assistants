@@ -20,7 +20,7 @@ export function CurrencyPage() {
   }, []);
 
   return (
-    <div ref={root} className="page-enter mx-auto max-w-xl">
+    <div ref={root} className="page-enter mx-auto max-w-4xl">
       <CurrencyCard />
     </div>
   );

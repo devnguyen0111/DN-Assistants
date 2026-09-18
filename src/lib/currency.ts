@@ -12,13 +12,102 @@ export const POPULAR_CURRENCIES = [
   "SGD",
   "AUD",
   "CAD",
+  "CHF",
   "HKD",
   "TWD",
   "MYR",
   "IDR",
   "INR",
   "PHP",
+  "NZD",
+  "BRL",
+  "RUB",
+  "AED",
+  "SAR",
+  "TRY",
+  "SEK",
+  "NOK",
+  "DKK",
+  "PLN",
+  "CZK",
+  "HUF",
+  "ILS",
+  "MXN",
 ] as const;
+
+export type CurrencyInfo = {
+  code: string;
+  name: string;
+  nameVi: string;
+  symbol: string;
+  flag: string;
+};
+
+export const CURRENCY_INFO: Record<string, CurrencyInfo> = {
+  USD: { code: "USD", name: "US Dollar", nameVi: "Đô la Mỹ", symbol: "$", flag: "🇺🇸" },
+  VND: { code: "VND", name: "Vietnamese Dong", nameVi: "Đồng Việt Nam", symbol: "₫", flag: "🇻🇳" },
+  EUR: { code: "EUR", name: "Euro", nameVi: "Euro", symbol: "€", flag: "🇪🇺" },
+  GBP: { code: "GBP", name: "British Pound", nameVi: "Bảng Anh", symbol: "£", flag: "🇬🇧" },
+  JPY: { code: "JPY", name: "Japanese Yen", nameVi: "Yên Nhật", symbol: "¥", flag: "🇯🇵" },
+  CNY: { code: "CNY", name: "Chinese Yuan", nameVi: "Nhân dân tệ", symbol: "¥", flag: "🇨🇳" },
+  KRW: { code: "KRW", name: "South Korean Won", nameVi: "Won Hàn Quốc", symbol: "₩", flag: "🇰🇷" },
+  THB: { code: "THB", name: "Thai Baht", nameVi: "Baht Thái", symbol: "฿", flag: "🇹🇭" },
+  SGD: { code: "SGD", name: "Singapore Dollar", nameVi: "Đô la Singapore", symbol: "S$", flag: "🇸🇬" },
+  AUD: { code: "AUD", name: "Australian Dollar", nameVi: "Đô la Úc", symbol: "A$", flag: "🇦🇺" },
+  CAD: { code: "CAD", name: "Canadian Dollar", nameVi: "Đô la Canada", symbol: "C$", flag: "🇨🇦" },
+  CHF: { code: "CHF", name: "Swiss Franc", nameVi: "Franc Thụy Sĩ", symbol: "CHF", flag: "🇨🇭" },
+  HKD: { code: "HKD", name: "Hong Kong Dollar", nameVi: "Đô la Hồng Kông", symbol: "HK$", flag: "🇭🇰" },
+  TWD: { code: "TWD", name: "New Taiwan Dollar", nameVi: "Tân Đài tệ", symbol: "NT$", flag: "🇹🇼" },
+  MYR: { code: "MYR", name: "Malaysian Ringgit", nameVi: "Ringgit Malaysia", symbol: "RM", flag: "🇲🇾" },
+  IDR: { code: "IDR", name: "Indonesian Rupiah", nameVi: "Rupiah Indonesia", symbol: "Rp", flag: "🇮🇩" },
+  INR: { code: "INR", name: "Indian Rupee", nameVi: "Rupee Ấn Độ", symbol: "₹", flag: "🇮🇳" },
+  PHP: { code: "PHP", name: "Philippine Peso", nameVi: "Peso Philippines", symbol: "₱", flag: "🇵🇭" },
+  NZD: { code: "NZD", name: "New Zealand Dollar", nameVi: "Đô la New Zealand", symbol: "NZ$", flag: "🇳🇿" },
+  BRL: { code: "BRL", name: "Brazilian Real", nameVi: "Real Brazil", symbol: "R$", flag: "🇧🇷" },
+  RUB: { code: "RUB", name: "Russian Ruble", nameVi: "Rúp Nga", symbol: "₽", flag: "🇷🇺" },
+  AED: { code: "AED", name: "UAE Dirham", nameVi: "Dirham UAE", symbol: "AED", flag: "🇦🇪" },
+  SAR: { code: "SAR", name: "Saudi Riyal", nameVi: "Riyal Ả Rập Xê Út", symbol: "SAR", flag: "🇸🇦" },
+  TRY: { code: "TRY", name: "Turkish Lira", nameVi: "Lira Thổ Nhĩ Kỳ", symbol: "₺", flag: "🇹🇷" },
+  SEK: { code: "SEK", name: "Swedish Krona", nameVi: "Krona Thụy Điển", symbol: "kr", flag: "🇸🇪" },
+  NOK: { code: "NOK", name: "Norwegian Krone", nameVi: "Krone Na Uy", symbol: "kr", flag: "🇳🇴" },
+  DKK: { code: "DKK", name: "Danish Krone", nameVi: "Krone Đan Mạch", symbol: "kr", flag: "🇩🇰" },
+  PLN: { code: "PLN", name: "Polish Zloty", nameVi: "Zloty Ba Lan", symbol: "zł", flag: "🇵🇱" },
+  CZK: { code: "CZK", name: "Czech Koruna", nameVi: "Koruna Séc", symbol: "Kč", flag: "🇨🇿" },
+  HUF: { code: "HUF", name: "Hungarian Forint", nameVi: "Forint Hungary", symbol: "Ft", flag: "🇭🇺" },
+  ILS: { code: "ILS", name: "Israeli Shekel", nameVi: "Shekel Israel", symbol: "₪", flag: "🇮🇱" },
+  MXN: { code: "MXN", name: "Mexican Peso", nameVi: "Peso Mexico", symbol: "Mex$", flag: "🇲🇽" },
+};
+
+export function getCurrencyInfo(code: string): CurrencyInfo {
+  const upper = code.toUpperCase();
+  return (
+    CURRENCY_INFO[upper] ?? {
+      code: upper,
+      name: upper,
+      nameVi: upper,
+      symbol: upper,
+      flag: "🌐",
+    }
+  );
+}
+
+export function searchCurrencies(
+  query: string,
+  list: string[],
+  _locale: "vi" | "en" = "vi",
+): string[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter((code) => {
+    const info = getCurrencyInfo(code);
+    return (
+      info.code.toLowerCase().includes(q) ||
+      info.symbol.toLowerCase().includes(q) ||
+      info.name.toLowerCase().includes(q) ||
+      info.nameVi.toLowerCase().includes(q)
+    );
+  });
+}
 
 export type CurrencyCode = string;
 
@@ -235,17 +324,79 @@ export function parseAmount(raw: string): number {
   return Number(s);
 }
 
-/** Parse queries like "100 usd to vnd" or "100 usd sang vnd". */
+const SYMBOL_TO_CODE: Record<string, string> = {
+  "$": "USD",
+  "€": "EUR",
+  "£": "GBP",
+  "¥": "JPY",
+  "₫": "VND",
+  "₩": "KRW",
+  "฿": "THB",
+  "₹": "INR",
+  "C$": "CAD",
+  "A$": "AUD",
+  "S$": "SGD",
+};
+
+/** Parse queries like "100 usd to vnd", "$100 to vnd", "500k vnd sang usd", or "đổi 100$ sang vnd". */
 export function parseCurrencyQuery(
   query: string,
 ): { amount: number; from: string; to: string } | null {
-  const m = query
-    .trim()
-    .match(/^(?:đổi\s+)?([\d.,]+)\s*([a-z]{3})\s*(?:to|sang|→|->|=)\s*([a-z]{3})$/i);
-  if (!m) return null;
-  const amount = parseAmount(m[1]);
-  if (!Number.isFinite(amount)) return null;
-  return { amount, from: m[2].toUpperCase(), to: m[3].toUpperCase() };
+  const trimmed = query.trim().toLowerCase();
+
+  // Pattern 1: $100 to vnd or €50 to usd
+  const symbolPrefixMatch = trimmed.match(
+    /^(?:đổi\s+)?([$€£¥₫₩฿₹])\s*([\d.,]+(?:[km]|tr|triệu|nghìn)?)\s*(?:to|sang|in|into|→|->|=)\s*([a-z]{3}|[$€£¥₫₩฿₹])$/i,
+  );
+  if (symbolPrefixMatch) {
+    const from = SYMBOL_TO_CODE[symbolPrefixMatch[1]] ?? "USD";
+    const amount = parseAmountWithUnit(symbolPrefixMatch[2]);
+    const toRaw = symbolPrefixMatch[3];
+    const to = (SYMBOL_TO_CODE[toRaw] ?? toRaw).toUpperCase();
+    if (Number.isFinite(amount) && to.length === 3) {
+      return { amount, from, to };
+    }
+  }
+
+  // Pattern 2: 100$ to vnd or 100 usd to vnd
+  const generalMatch = trimmed.match(
+    /^(?:đổi\s+)?([\d.,]+(?:[km]|tr|triệu|nghìn)?)\s*([a-z]{3}|[$€£¥₫₩฿₹])\s*(?:to|sang|in|into|→|->|=)\s*([a-z]{3}|[$€£¥₫₩฿₹])$/i,
+  );
+  if (generalMatch) {
+    const amount = parseAmountWithUnit(generalMatch[1]);
+    const fromRaw = generalMatch[2];
+    const toRaw = generalMatch[3];
+    const from = (SYMBOL_TO_CODE[fromRaw] ?? fromRaw).toUpperCase();
+    const to = (SYMBOL_TO_CODE[toRaw] ?? toRaw).toUpperCase();
+    if (Number.isFinite(amount) && from.length === 3 && to.length === 3) {
+      return { amount, from, to };
+    }
+  }
+
+  return null;
+}
+
+function parseAmountWithUnit(raw: string): number {
+  let s = raw.trim().toLowerCase();
+  let multiplier = 1;
+  if (s.endsWith("triệu") || s.endsWith("trieu")) {
+    multiplier = 1_000_000;
+    s = s.replace(/(?:triệu|trieu)/g, "");
+  } else if (s.endsWith("nghìn") || s.endsWith("nghin")) {
+    multiplier = 1_000;
+    s = s.replace(/(?:nghìn|nghin)/g, "");
+  } else if (s.endsWith("m")) {
+    multiplier = 1_000_000;
+    s = s.slice(0, -1);
+  } else if (s.endsWith("tr")) {
+    multiplier = 1_000_000;
+    s = s.slice(0, -2);
+  } else if (s.endsWith("k")) {
+    multiplier = 1_000;
+    s = s.slice(0, -1);
+  }
+  const base = parseAmount(s);
+  return Number.isFinite(base) ? base * multiplier : NaN;
 }
 
 export function formatConverted(amount: number, code: string, locale: string): string {
@@ -272,6 +423,20 @@ export function formatRate(rate: number, locale: string): string {
 }
 
 export const PAIR_STORAGE_KEY = "dn-assistant-currency-pair";
+export const WATCHLIST_STORAGE_KEY = "dn-assistant-currency-watchlist";
+export const DEFAULT_WATCHLIST = [
+  "VND",
+  "USD",
+  "EUR",
+  "JPY",
+  "GBP",
+  "CNY",
+  "KRW",
+  "SGD",
+  "THB",
+  "AUD",
+  "CAD",
+];
 
 export function loadSavedPair(): { from: string; to: string } | null {
   try {
@@ -289,4 +454,73 @@ export function loadSavedPair(): { from: string; to: string } | null {
 
 export function savePair(from: string, to: string) {
   localStorage.setItem(PAIR_STORAGE_KEY, JSON.stringify({ from, to }));
+}
+
+export function loadWatchlist(): string[] {
+  try {
+    const raw = localStorage.getItem(WATCHLIST_STORAGE_KEY);
+    if (!raw) return DEFAULT_WATCHLIST;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((s) => String(s).toUpperCase());
+    }
+    return DEFAULT_WATCHLIST;
+  } catch {
+    return DEFAULT_WATCHLIST;
+  }
+}
+
+export function saveWatchlist(list: string[]) {
+  localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(list));
+}
+
+export type FeeCalculationResult = {
+  grossAmount: number;
+  feePercent: number;
+  feeAmount: number;
+  netAmount: number;
+  rawRate: number;
+  effectiveRate: number;
+};
+
+export function calculateWithFee(
+  convertedAmount: number,
+  feePercent: number,
+  fromAmount: number,
+): FeeCalculationResult {
+  const safeFee = Math.max(0, feePercent);
+  const feeAmount = (convertedAmount * safeFee) / 100;
+  const netAmount = Math.max(0, convertedAmount - feeAmount);
+  const rawRate = fromAmount > 0 ? convertedAmount / fromAmount : 0;
+  const effectiveRate = fromAmount > 0 ? netAmount / fromAmount : 0;
+  return {
+    grossAmount: convertedAmount,
+    feePercent: safeFee,
+    feeAmount,
+    netAmount,
+    rawRate,
+    effectiveRate,
+  };
+}
+
+export type QuickConversionRow = {
+  unit: number;
+  forward: number;
+  backward: number;
+};
+
+export function getQuickConversions(
+  from: string,
+  to: string,
+  rates: Record<string, number>,
+): QuickConversionRow[] {
+  const units = [1, 5, 10, 25, 50, 100, 500, 1000];
+  const rateFwd = convert(1, from, to, rates);
+  const rateBwd = convert(1, to, from, rates);
+  if (!Number.isFinite(rateFwd) || !Number.isFinite(rateBwd)) return [];
+  return units.map((u) => ({
+    unit: u,
+    forward: u * rateFwd,
+    backward: u * rateBwd,
+  }));
 }
