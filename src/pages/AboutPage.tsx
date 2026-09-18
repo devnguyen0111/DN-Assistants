@@ -21,6 +21,10 @@ import {
   Keyboard,
   ArrowUpCircle,
   Loader2,
+  CheckCircle2,
+  FileCode2,
+  Palette,
+  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 import { promptUpdateIfAvailable } from "@/lib/updates";
@@ -75,6 +79,10 @@ const CATALOG: { route: AppRoute; icon: typeof Clock3; group: "main" | "tools" |
   { route: "calculator", icon: Coins, group: "tools" },
   { route: "currency", icon: Coins, group: "tools" },
   { route: "devtools", icon: Code2, group: "tools" },
+  { route: "habits", icon: CheckCircle2, group: "tools" },
+  { route: "snippets", icon: FileCode2, group: "tools" },
+  { route: "colors", icon: Palette, group: "tools" },
+  { route: "filetools", icon: Wrench, group: "tools" },
   { route: "notes", icon: NotebookPen, group: "tools" },
   { route: "todo", icon: CheckSquare, group: "tools" },
   { route: "clipboard", icon: ClipboardList, group: "tools" },
@@ -121,6 +129,10 @@ export function AboutPage({ onNavigate }: Props) {
       calculator: t.navCalculator,
       currency: t.navCurrency,
       devtools: t.navDevTools,
+      habits: t.navHabits,
+      snippets: t.navSnippets,
+      colors: t.navColors,
+      filetools: t.navFileTools,
       notes: t.navNotes,
       todo: t.navTodo,
       clipboard: t.navClipboard,

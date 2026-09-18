@@ -21,6 +21,10 @@ import {
   Timer,
   Flame,
   KeyRound,
+  CheckCircle2,
+  FileCode2,
+  Palette,
+  Wrench,
 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -64,6 +68,10 @@ const NAV_GROUPS: NavGroup[] = [
       { route: "calculator", icon: Calculator },
       { route: "currency", icon: Coins },
       { route: "devtools", icon: Code2 },
+      { route: "habits", icon: CheckCircle2 },
+      { route: "snippets", icon: FileCode2 },
+      { route: "colors", icon: Palette },
+      { route: "filetools", icon: Wrench },
       { route: "notes", icon: NotebookPen },
       { route: "todo", icon: CheckSquare },
       { route: "clipboard", icon: ClipboardList },
@@ -91,6 +99,10 @@ const ROUTE_ICON: Record<AppRoute, typeof Home> = {
   calculator: Calculator,
   currency: Coins,
   devtools: Code2,
+  habits: CheckCircle2,
+  snippets: FileCode2,
+  colors: Palette,
+  filetools: Wrench,
   notes: NotebookPen,
   todo: CheckSquare,
   clipboard: ClipboardList,

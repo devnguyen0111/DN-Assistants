@@ -18,6 +18,10 @@ import {
   Timer,
   Flame,
   KeyRound,
+  CheckCircle2,
+  FileCode2,
+  Palette,
+  Wrench,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -28,11 +32,13 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { evaluate, formatResult } from "@/lib/calculator";
 import { convertCurrency, formatConverted, parseCurrencyQuery } from "@/lib/currency";
 import { listEvents, type CalendarEvent } from "@/lib/events";
 import { createNote, searchNotes, type Note } from "@/lib/notes";
+import { expandPlaceholders, searchSnippets, type Snippet } from "@/lib/snippets";
 import { localeTag, useI18n } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
 import { useSettings } from "@/lib/settings-context";
@@ -57,6 +63,10 @@ const NAV_ITEMS: Array<{
     | "navDevTools"
     | "navNotes"
     | "navTodo"
+    | "navHabits"
+    | "navSnippets"
+    | "navColors"
+    | "navFileTools"
     | "navClipboard"
     | "navPasswords"
     | "navFocus"
@@ -73,6 +83,10 @@ const NAV_ITEMS: Array<{
   { route: "calculator", icon: Calculator, labelKey: "navCalculator" },
   { route: "currency", icon: Coins, labelKey: "navCurrency" },
   { route: "devtools", icon: Code2, labelKey: "navDevTools" },
+  { route: "habits", icon: CheckCircle2, labelKey: "navHabits" },
+  { route: "snippets", icon: FileCode2, labelKey: "navSnippets" },
+  { route: "colors", icon: Palette, labelKey: "navColors" },
+  { route: "filetools", icon: Wrench, labelKey: "navFileTools" },
   { route: "notes", icon: NotebookPen, labelKey: "navNotes" },
   { route: "todo", icon: CheckSquare, labelKey: "navTodo" },
   { route: "clipboard", icon: ClipboardList, labelKey: "navClipboard" },
@@ -100,12 +114,14 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [fxResult, setFxResult] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setQuery("");
       setFxResult(null);
+      setSnippets([]);
       return;
     }
     void listEvents()
@@ -118,12 +134,16 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
     const q = query.trim();
     if (!q) {
       setNotes([]);
+      setSnippets([]);
       return;
     }
     const timer = window.setTimeout(() => {
       void searchNotes(q)
         .then((rows) => setNotes(rows.slice(0, 6)))
         .catch(() => setNotes([]));
+      void searchSnippets(q)
+        .then((rows) => setSnippets(rows.slice(0, 6)))
+        .catch(() => setSnippets([]));
     }, 150);
     return () => window.clearTimeout(timer);
   }, [query, open]);
@@ -347,6 +367,37 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
                 >
                   <NotebookPen className="size-4" />
                   <span className="truncate">{note.title || t.noteTitlePlaceholder}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
+        )}
+
+        {snippets.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading={t.commandSnippets}>
+              {snippets.map((snip) => (
+                <CommandItem
+                  key={snip.id}
+                  value={`snippet-${snip.id}-${snip.title}-${snip.content}`}
+                  onSelect={async () => {
+                    const expanded = await expandPlaceholders(snip.content);
+                    await navigator.clipboard.writeText(expanded);
+                    toast.success(`${t.copiedWithPlaceholders}: ${snip.title}`);
+                    onOpenChange(false);
+                  }}
+                >
+                  <FileCode2 className="size-4" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{snip.title}</p>
+                    <p className="truncate text-xs text-muted-foreground font-mono">
+                      {snip.content.slice(0, 60)}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono uppercase">
+                    {snip.language}
+                  </Badge>
                 </CommandItem>
               ))}
             </CommandGroup>

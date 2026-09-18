@@ -4,10 +4,12 @@ import { loadSettings, saveSettings, type AppSettings } from "@/lib/settings";
 import { listEvents, upsertEventFromImport, type CalendarEvent } from "@/lib/events";
 import { listNotes, upsertNote, type Note } from "@/lib/notes";
 import { listTodos, upsertTodo, type Todo } from "@/lib/todos";
+import { listHabits, getHabitLogs, upsertHabit, upsertHabitLog, type Habit, type HabitLog } from "@/lib/habits";
+import { listSnippets, upsertSnippet, type Snippet } from "@/lib/snippets";
 import { loadVaultMeta, type VaultMeta } from "@/lib/vault";
 
 const DB_URL = "sqlite:dn-assistant.db";
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = "";
@@ -30,6 +32,9 @@ export type EncryptedBackupPayload = {
   events: CalendarEvent[];
   notes: Note[];
   todos: Todo[];
+  habits?: Habit[];
+  habit_logs?: HabitLog[];
+  snippets?: Snippet[];
   vault_entries: VaultEntryRow[];
   vaultMeta: VaultMeta | null;
 };
@@ -87,6 +92,9 @@ export async function exportEncryptedBackup(password: string): Promise<void> {
     events: await listEvents(),
     notes: await listNotes(),
     todos: await listTodos(),
+    habits: await listHabits(),
+    habit_logs: await getHabitLogs(),
+    snippets: await listSnippets(),
     vault_entries: await listVaultEntryRows(),
     vaultMeta: await loadVaultMeta(),
   };
@@ -115,6 +123,8 @@ export async function restoreEncryptedBackup(password: string): Promise<{
   events: number;
   notes: number;
   todos: number;
+  habits: number;
+  snippets: number;
 }> {
   if (!password.trim()) throw new Error("Backup password required");
 
@@ -126,7 +136,7 @@ export async function restoreEncryptedBackup(password: string): Promise<{
     filters: [{ name: "DN Backup", extensions: ["dnbackup"] }],
   });
   if (!path || typeof path !== "string") {
-    return { events: 0, notes: 0, todos: 0 };
+    return { events: 0, notes: 0, todos: 0, habits: 0, snippets: 0 };
   }
 
   const raw = await readTextFile(path);
@@ -144,6 +154,8 @@ export async function restoreEncryptedBackup(password: string): Promise<{
   let events = 0;
   let notes = 0;
   let todos = 0;
+  let habits = 0;
+  let snippets = 0;
 
   for (const event of data.events ?? []) {
     await upsertEventFromImport(event as CalendarEvent);
@@ -157,6 +169,17 @@ export async function restoreEncryptedBackup(password: string): Promise<{
     await upsertTodo(todo as Todo);
     todos += 1;
   }
+  for (const habit of data.habits ?? []) {
+    await upsertHabit(habit as Habit);
+    habits += 1;
+  }
+  for (const log of data.habit_logs ?? []) {
+    await upsertHabitLog(log as HabitLog);
+  }
+  for (const snippet of data.snippets ?? []) {
+    await upsertSnippet(snippet as Snippet);
+    snippets += 1;
+  }
 
   if (Array.isArray(data.vault_entries)) {
     await replaceVaultEntries(data.vault_entries);
@@ -166,7 +189,9 @@ export async function restoreEncryptedBackup(password: string): Promise<{
   window.dispatchEvent(new Event("dn-events-changed"));
   window.dispatchEvent(new Event("dn-notes-changed"));
   window.dispatchEvent(new Event("dn-todos-changed"));
+  window.dispatchEvent(new Event("dn-habits-changed"));
+  window.dispatchEvent(new Event("dn-snippets-changed"));
   window.dispatchEvent(new Event("dn-vault-changed"));
 
-  return { events, notes, todos };
+  return { events, notes, todos, habits, snippets };
 }

@@ -150,6 +150,40 @@ pub fn run() {
         ALTER TABLE todos ADD COLUMN repeat_until TEXT;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 9,
+            description: "create_habits_and_snippets_tables",
+            sql: "CREATE TABLE IF NOT EXISTS habits (
+            id TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'general',
+            color TEXT NOT NULL DEFAULT 'teal',
+            target_days_per_week INTEGER NOT NULL DEFAULT 7,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS habit_logs (
+            id TEXT PRIMARY KEY NOT NULL,
+            habit_id TEXT NOT NULL,
+            date TEXT NOT NULL,
+            completed INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date);
+        CREATE INDEX IF NOT EXISTS idx_habit_logs_habit ON habit_logs(habit_id);
+        CREATE TABLE IF NOT EXISTS snippets (
+            id TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'general',
+            language TEXT NOT NULL DEFAULT 'text',
+            tags TEXT NOT NULL DEFAULT '',
+            pinned INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_snippets_category ON snippets(category);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let mut builder = tauri::Builder::default();

@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
+  Check,
+  CheckCircle2,
   CheckSquare,
   ClipboardList,
   Clock3,
   Cpu,
+  FileCode2,
   Flame,
   MemoryStick,
   NotebookPen,
+  Palette,
+  StickyNote,
   Timer,
 } from "lucide-react";
 import { BentoGrid, BentoItem } from "@/components/bento/BentoGrid";
@@ -22,13 +27,14 @@ import { useSystemStats } from "@/hooks/useSystemStats";
 import { formatEventRange, listUpcoming, type CalendarEvent } from "@/lib/events";
 import { createNote, listNotes, type Note } from "@/lib/notes";
 import { listTodos, type Todo } from "@/lib/todos";
+import { getAllHabitsWithStats, toggleHabitDate, formatDateKey, type HabitStats } from "@/lib/habits";
 import { isDoneToday, listTikTokStreaks, type TikTokStreak } from "@/lib/tiktok-streaks";
 import { localeTag, useI18n } from "@/lib/i18n";
 import { navLabel } from "@/lib/page-meta";
 import { useSettings } from "@/lib/settings-context";
 import { pad2, formatPercent, formatBytes } from "@/lib/utils";
 import { zonedParts } from "@/lib/timezones";
-import type { AppRoute } from "@/lib/routing";
+import { openWidgetWindow, type AppRoute } from "@/lib/routing";
 import { toast } from "sonner";
 
 type Props = {
@@ -52,12 +58,19 @@ export function HomePage({ onNavigate }: Props) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [streaks, setStreaks] = useState<TikTokStreak[]>([]);
+  const [habits, setHabits] = useState<HabitStats[]>([]);
   const { stats } = useSystemStats(3000);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(id);
   }, []);
+
+  const loadHabits = () => {
+    void getAllHabitsWithStats()
+      .then(setHabits)
+      .catch(() => setHabits([]));
+  };
 
   useEffect(() => {
     void listUpcoming(5)
@@ -76,6 +89,11 @@ export function HomePage({ onNavigate }: Props) {
     void listTikTokStreaks()
       .then(setStreaks)
       .catch(() => setStreaks([]));
+    loadHabits();
+
+    const habitHandler = () => loadHabits();
+    window.addEventListener("dn-habits-changed", habitHandler);
+    return () => window.removeEventListener("dn-habits-changed", habitHandler);
   }, []);
 
   const primary = useMemo(
@@ -130,6 +148,18 @@ export function HomePage({ onNavigate }: Props) {
           <CheckSquare className="size-3.5" />
           {t.homeOpenTodo}
         </Button>
+        <Button size="sm" variant="secondary" onClick={() => onNavigate("habits")}>
+          <CheckCircle2 className="size-3.5" />
+          {t.navHabits}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => onNavigate("snippets")}>
+          <FileCode2 className="size-3.5" />
+          {t.navSnippets}
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => onNavigate("colors")}>
+          <Palette className="size-3.5" />
+          {t.navColors}
+        </Button>
         <Button size="sm" variant="secondary" onClick={() => onNavigate("clipboard")}>
           <ClipboardList className="size-3.5" />
           {t.homeOpenClipboard}
@@ -137,6 +167,15 @@ export function HomePage({ onNavigate }: Props) {
         <Button size="sm" variant="secondary" onClick={() => onNavigate("focus")}>
           <Timer className="size-3.5" />
           {t.homeOpenFocus}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => void openWidgetWindow("sticky")}
+          className="border-primary/30 text-primary hover:bg-primary/10"
+        >
+          <StickyNote className="size-3.5" />
+          {t.widgetSticky}
         </Button>
       </div>
 
@@ -411,6 +450,59 @@ export function HomePage({ onNavigate }: Props) {
                     </div>
                   );
                 })
+              )}
+            </CardContent>
+          </Card>
+        </BentoItem>
+
+        <BentoItem>
+          <Card className="h-full">
+            <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle
+                className="flex cursor-pointer items-center gap-2"
+                onClick={() => onNavigate("habits")}
+              >
+                <CheckCircle2 className="size-4 text-primary" />
+                {t.habitsTitle}
+              </CardTitle>
+              <Button size="sm" variant="ghost" onClick={() => onNavigate("habits")}>
+                {t.addHabit}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {habits.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t.noHabitsYet}</p>
+              ) : (
+                habits.slice(0, 4).map((h) => (
+                  <div
+                    key={h.habit.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border bg-card/50 p-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const today = formatDateKey(new Date());
+                          await toggleHabitDate(h.habit.id, today);
+                        }}
+                        className={
+                          h.completedToday
+                            ? "flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
+                            : "flex size-6 shrink-0 items-center justify-center rounded-md border border-border bg-muted/20 text-muted-foreground hover:border-primary"
+                        }
+                      >
+                        <Check className="size-3.5 stroke-[2.5]" />
+                      </button>
+                      <span className="truncate text-sm font-medium">{h.habit.title}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs text-muted-foreground">
+                      <Flame className="size-3 text-amber-500" />
+                      <span>{h.currentStreak}d</span>
+                    </div>
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>

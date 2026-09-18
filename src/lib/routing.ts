@@ -7,6 +7,10 @@ export type AppRoute =
   | "devtools"
   | "notes"
   | "todo"
+  | "habits"
+  | "snippets"
+  | "colors"
+  | "filetools"
   | "clipboard"
   | "passwords"
   | "focus"
@@ -26,6 +30,10 @@ export const ROUTES: AppRoute[] = [
   "devtools",
   "notes",
   "todo",
+  "habits",
+  "snippets",
+  "colors",
+  "filetools",
   "clipboard",
   "passwords",
   "focus",
@@ -56,13 +64,13 @@ export function parseHashRoute(hash = window.location.hash): AppRoute {
   return "home";
 }
 
-export type WidgetKind = "clock" | "focus" | "cpu";
+export type WidgetKind = "clock" | "focus" | "cpu" | "sticky";
 
 export function parseWidgetKind(hash = window.location.hash): WidgetKind | null {
   const parts = hash.replace(/^#\/?/, "").split("/");
   if (parts[0]?.toLowerCase() !== "widget") return null;
   const kind = parts[1]?.toLowerCase();
-  if (kind === "clock" || kind === "focus" || kind === "cpu") return kind;
+  if (kind === "clock" || kind === "focus" || kind === "cpu" || kind === "sticky") return kind;
   return null;
 }
 
@@ -84,6 +92,7 @@ export async function openWidgetWindow(kind: WidgetKind) {
       clock: { width: 280, height: 140 },
       focus: { width: 260, height: 180 },
       cpu: { width: 220, height: 120 },
+      sticky: { width: 320, height: 260 },
     }[kind];
     new WebviewWindow(label, {
       url: `index.html#/widget/${kind}`,

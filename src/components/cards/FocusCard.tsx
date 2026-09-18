@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, SkipForward, Timer as TimerIcon } from "lucide-react";
+import {
+  Pause,
+  Play,
+  RotateCcw,
+  SkipForward,
+  Timer as TimerIcon,
+  Volume2,
+  VolumeX,
+  Waves,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { useI18n } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings-context";
@@ -17,6 +27,10 @@ import {
   saveTimerState,
   type FocusKind,
 } from "@/lib/focus";
+import {
+  soundscapeEngine,
+  SOUNDSCAPE_TRACKS,
+} from "@/lib/soundscapes";
 import { cn } from "@/lib/utils";
 
 const NEXT_KIND: Record<FocusKind, FocusKind> = {
@@ -49,7 +63,14 @@ export function FocusCard() {
   const [stats7, setStats7] = useState<{ date: string; minutes: number }[]>([]);
   const [stats30, setStats30] = useState<{ date: string; minutes: number }[]>([]);
   const [statsRange, setStatsRange] = useState<7 | 30>(7);
+  const [soundscapeOpen, setSoundscapeOpen] = useState(false);
+  const [, setSoundTick] = useState(0);
   const intervalRef = useRef<number | null>(null);
+
+  // Subscribe to soundscape engine updates
+  useEffect(() => {
+    return soundscapeEngine.subscribe(() => setSoundTick((n) => n + 1));
+  }, []);
 
   const refreshStats = useCallback(async () => {
     try {
@@ -240,6 +261,115 @@ export function FocusCard() {
             <SkipForward className="size-4" />
             {t.focusSkip}
           </Button>
+        </div>
+
+        {/* Focus Soundscapes Audio Mixer */}
+        <div className="w-full rounded-2xl border bg-muted/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Waves className="size-4 text-primary" />
+              <span className="text-sm font-semibold tracking-tight">{t.soundscapes}</span>
+              {soundscapeEngine.isAnyPlaying() && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-mono text-primary">
+                  Playing
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {soundscapeEngine.isAnyPlaying() && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => soundscapeEngine.stopAll()}
+                >
+                  <VolumeX className="mr-1 size-3.5" />
+                  {t.stopAllSounds}
+                </Button>
+              )}
+
+              <Button
+                size="sm"
+                variant={soundscapeOpen ? "secondary" : "outline"}
+                className="h-7 text-xs"
+                onClick={() => setSoundscapeOpen((prev) => !prev)}
+              >
+                {soundscapeOpen ? "Hide" : "Mixer"}
+              </Button>
+            </div>
+          </div>
+
+          {soundscapeOpen && (
+            <div className="mt-3.5 space-y-3.5 border-t pt-3">
+              {/* Master volume */}
+              <div className="flex items-center gap-3">
+                <Volume2 className="size-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{t.masterVolume}</span>
+                <Slider
+                  value={[soundscapeEngine.getMasterVolume() * 100]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  onValueChange={(v) => soundscapeEngine.setMasterVolume((v[0] ?? 80) / 100)}
+                  className="flex-1"
+                />
+                <span className="font-mono text-xs text-muted-foreground">
+                  {Math.round(soundscapeEngine.getMasterVolume() * 100)}%
+                </span>
+              </div>
+
+              {/* Tracks grid */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {SOUNDSCAPE_TRACKS.map((track) => {
+                  const playing = soundscapeEngine.isTrackPlaying(track.id);
+                  const vol = soundscapeEngine.getTrackVolume(track.id);
+
+                  return (
+                    <div
+                      key={track.id}
+                      className={cn(
+                        "rounded-xl border p-2.5 transition-all",
+                        playing
+                          ? "border-primary/40 bg-primary/10 shadow-sm"
+                          : "bg-background/60 hover:bg-background",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => soundscapeEngine.toggleTrack(track.id)}
+                        className="flex w-full items-center justify-between text-left"
+                      >
+                        <span className="text-sm font-medium">
+                          {track.icon} {t[track.nameKey as keyof typeof t] ?? track.id}
+                        </span>
+                        <span
+                          className={cn(
+                            "size-2 rounded-full",
+                            playing ? "bg-primary animate-pulse" : "bg-muted",
+                          )}
+                        />
+                      </button>
+
+                      {playing && (
+                        <div className="mt-2 space-y-1">
+                          <Slider
+                            value={[vol * 100]}
+                            min={5}
+                            max={100}
+                            step={5}
+                            onValueChange={(v) =>
+                              soundscapeEngine.setTrackVolume(track.id, (v[0] ?? 50) / 100)
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="w-full space-y-3 border-t pt-4">

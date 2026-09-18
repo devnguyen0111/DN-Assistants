@@ -2,14 +2,20 @@
 
 Desktop utility app built with **Tauri 2**, **React 19**, **shadcn/ui**, **Lucide**, and **Anime.js**.
 
-**Version 0.2.1**
+**Version 0.3.0**
 
 ## Features
 
-- Home dashboard with greeting, quick actions, scratch pad, favorites, clock, agenda, system snapshot, weather, todos, notes, and TikTok streaks
+- Home dashboard with greeting, quick actions, scratch pad, favorites, clock, agenda, system snapshot, weather, todos, notes, TikTok streaks, and daily habit check-ins
 - Multi-page shell with grouped sidebar + pin-to-favorites, page-aware header, density modes, bilingual vi/en
 - First-run onboarding and What's New dialog after updates
-- Command palette (`Ctrl+K`) for navigation, events, notes, vault search, math, currency (`100 usd to vnd`), and scratch pad actions
+- Command palette (`Ctrl+K`) for navigation, snippets, events, notes, vault search, math, currency (`100 usd to vnd`), and scratch pad actions
+- **Habit Tracker & Routine Builder**: Daily check-ins, active streaks, best streak record, and 30-day heatmap grid visualization
+- **Color Studio & Palette Extractor**: Instant HEX/RGB/HSL/CMYK conversion, harmonies, image palette extraction from files/clipboard, WCAG 2.1 AA/AAA contrast checker, and CSS gradient generator
+- **Snippets & Dynamic Template Library**: Reusable code snippets & canned responses with automatic placeholder replacement (`{{date}}`, `{{time}}`, `{{clipboard}}`, `{{uuid}}`), syntax tags, and quick search in Command Palette
+- **Focus Soundscapes & Procedural Audio Synthesizer**: 100% offline ambient audio (Rain, Forest Wind, Ocean Waves, Campfire, Binaural Alpha Beats, White/Pink/Brown noise) with multi-channel mixer built into Pomodoro Focus mode
+- **Desktop Floating Sticky Note Widget**: Always-on-top desktop sticky note with autosave, copy, and 1-click note conversion
+- **File Checksum & Media Toolkit**: File hash integrity verification (SHA-256, SHA-1, SHA-512), image resizer & format converter (WebP/PNG/JPEG), and text case & word count suite
 - Live clock with solar + Vietnamese lunar date (Can Chi), world clocks, floating clock widget
 - Month calendar with schedule notes (SQLite), reminders, recurring daily/weekly events, ICS import/export
 - Calculator with history + unit converter; currency exchange via Frankfurter / ExchangeRate-API
@@ -21,7 +27,7 @@ Desktop utility app built with **Tauri 2**, **React 19**, **shadcn/ui**, **Lucid
 - Network tools: public IP, ping, port check, DNS lookup, download speed test
 - Weather via Open-Meteo; developer toolbox (JSON/Base64/JWT/hash/UUID/QR/regex/time/diff)
 - Desktop native: tray, close-to-tray, autostart, always-on-top, custom global hotkeys, window state, single instance, auto-updater
-- Export/import JSON data + encrypted `.dnbackup` backups and diagnostics export
+- Export/import JSON data + encrypted `.dnbackup` backups (events, notes, todos, habits, snippets, vault) and diagnostics export
 
 ## Develop
 

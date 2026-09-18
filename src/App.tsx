@@ -38,6 +38,10 @@ import { TikTokPage } from "@/pages/TikTokPage";
 import { TodoPage } from "@/pages/TodoPage";
 import { WeatherPage } from "@/pages/WeatherPage";
 import { WidgetPage } from "@/pages/WidgetPage";
+import { HabitsPage } from "@/pages/HabitsPage";
+import { SnippetsPage } from "@/pages/SnippetsPage";
+import { ColorsPage } from "@/pages/ColorsPage";
+import { FileToolsPage } from "@/pages/FileToolsPage";
 
 function AppRoutes() {
   const { route, setRoute } = useHashRoute();
@@ -101,6 +105,10 @@ function AppRoutes() {
       {route === "calculator" && <CalculatorPage />}
       {route === "currency" && <CurrencyPage />}
       {route === "devtools" && <DevToolsPage />}
+      {route === "habits" && <HabitsPage />}
+      {route === "snippets" && <SnippetsPage />}
+      {route === "colors" && <ColorsPage />}
+      {route === "filetools" && <FileToolsPage />}
       {route === "notes" && <NotesPage />}
       {route === "todo" && <TodoPage />}
       {route === "clipboard" && <ClipboardPage />}
