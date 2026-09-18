@@ -35,9 +35,7 @@ export async function unregisterAllGlobalHotkeys(): Promise<void> {
 
 export async function syncGlobalHotkeys(settings: AppSettings): Promise<void> {
   try {
-    const { register, unregisterAll } = await import(
-      "@tauri-apps/plugin-global-shortcut"
-    );
+    const { register, unregisterAll } = await import("@tauri-apps/plugin-global-shortcut");
     await unregisterAll();
     registered = [];
 
@@ -51,25 +49,29 @@ export async function syncGlobalHotkeys(settings: AppSettings): Promise<void> {
     if (scratchpad) unique.set(scratchpad, "scratchpad");
 
     for (const [shortcut, action] of unique) {
-      await register(shortcut, (event) => {
-        if (event.state !== "Pressed") return;
-        void (async () => {
-          if (action === "toggle") {
-            await toggleMainWindow();
-            return;
-          }
-          await showMainWindow();
-          if (action === "clipboard") {
-            window.dispatchEvent(new Event("dn-hotkey-clipboard"));
-            return;
-          }
-          window.dispatchEvent(new Event("dn-hotkey-scratchpad"));
-          window.setTimeout(() => {
-            document.getElementById("dn-scratchpad")?.focus();
-          }, 50);
-        })();
-      });
-      registered.push(shortcut);
+      try {
+        await register(shortcut, (event) => {
+          if (event.state !== "Pressed") return;
+          void (async () => {
+            if (action === "toggle") {
+              await toggleMainWindow();
+              return;
+            }
+            await showMainWindow();
+            if (action === "clipboard") {
+              window.dispatchEvent(new Event("dn-hotkey-clipboard"));
+              return;
+            }
+            window.dispatchEvent(new Event("dn-hotkey-scratchpad"));
+            window.setTimeout(() => {
+              document.getElementById("dn-scratchpad")?.focus();
+            }, 50);
+          })();
+        });
+        registered.push(shortcut);
+      } catch {
+        // Shortcut already taken or invalid — skip, keep the rest.
+      }
     }
   } catch {
     // browser preview / plugin unavailable

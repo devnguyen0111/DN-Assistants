@@ -1,10 +1,7 @@
 import type { Dictionary } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
 
-const PAGE_META: Record<
-  AppRoute,
-  { title: keyof Dictionary; desc: keyof Dictionary }
-> = {
+const PAGE_META: Record<AppRoute, { title: keyof Dictionary; desc: keyof Dictionary }> = {
   home: { title: "pageTitleHome", desc: "pageDescHome" },
   clock: { title: "pageTitleClock", desc: "pageDescClock" },
   calendar: { title: "pageTitleCalendar", desc: "pageDescCalendar" },

@@ -63,16 +63,36 @@ export function DevToolsCard() {
             <TabsTrigger value="diff">Diff</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="json"><JsonTab /></TabsContent>
-          <TabsContent value="base64"><Base64Tab /></TabsContent>
-          <TabsContent value="url"><UrlTab /></TabsContent>
-          <TabsContent value="jwt"><JwtTab /></TabsContent>
-          <TabsContent value="hash"><HashTab /></TabsContent>
-          <TabsContent value="uuid"><UuidTab /></TabsContent>
-          <TabsContent value="qr"><QrTab /></TabsContent>
-          <TabsContent value="regex"><RegexTab /></TabsContent>
-          <TabsContent value="time"><TimeTab /></TabsContent>
-          <TabsContent value="diff"><DiffTab /></TabsContent>
+          <TabsContent value="json">
+            <JsonTab />
+          </TabsContent>
+          <TabsContent value="base64">
+            <Base64Tab />
+          </TabsContent>
+          <TabsContent value="url">
+            <UrlTab />
+          </TabsContent>
+          <TabsContent value="jwt">
+            <JwtTab />
+          </TabsContent>
+          <TabsContent value="hash">
+            <HashTab />
+          </TabsContent>
+          <TabsContent value="uuid">
+            <UuidTab />
+          </TabsContent>
+          <TabsContent value="qr">
+            <QrTab />
+          </TabsContent>
+          <TabsContent value="regex">
+            <RegexTab />
+          </TabsContent>
+          <TabsContent value="time">
+            <TimeTab />
+          </TabsContent>
+          <TabsContent value="diff">
+            <DiffTab />
+          </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
@@ -101,7 +121,9 @@ function JsonTab() {
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground">{t.input}</p>
         <Textarea rows={12} value={input} onChange={(e) => setInput(e.target.value)} />
-        <Button size="sm" onClick={run}>{t.jsonFormat}</Button>
+        <Button size="sm" onClick={run}>
+          {t.jsonFormat}
+        </Button>
       </div>
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground">{t.output}</p>
@@ -146,8 +168,12 @@ function Base64Tab() {
         <p className="text-xs text-muted-foreground">{t.input}</p>
         <Textarea rows={10} value={input} onChange={(e) => setInput(e.target.value)} />
         <div className="flex gap-2">
-          <Button size="sm" onClick={encode}>{t.base64Encode}</Button>
-          <Button size="sm" variant="outline" onClick={decode}>{t.base64Decode}</Button>
+          <Button size="sm" onClick={encode}>
+            {t.base64Encode}
+          </Button>
+          <Button size="sm" variant="outline" onClick={decode}>
+            {t.base64Decode}
+          </Button>
         </div>
       </div>
       <div className="space-y-2">
@@ -175,7 +201,9 @@ function UrlTab() {
         <p className="text-xs text-muted-foreground">{t.input}</p>
         <Textarea rows={10} value={input} onChange={(e) => setInput(e.target.value)} />
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => setOutput(urlEncode(input))}>{t.urlEncode}</Button>
+          <Button size="sm" onClick={() => setOutput(urlEncode(input))}>
+            {t.urlEncode}
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setOutput(urlDecode(input))}>
             {t.urlDecode}
           </Button>
@@ -217,7 +245,9 @@ function JwtTab() {
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground">{t.input}</p>
         <Textarea rows={10} value={input} onChange={(e) => setInput(e.target.value)} />
-        <Button size="sm" onClick={decode}>{t.jwtDecode}</Button>
+        <Button size="sm" onClick={decode}>
+          {t.jwtDecode}
+        </Button>
       </div>
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground">{t.output}</p>
@@ -245,17 +275,28 @@ function HashTab() {
 
   return (
     <div className="space-y-3">
-      <Textarea rows={6} placeholder={t.input} value={input} onChange={(e) => setInput(e.target.value)} />
+      <Textarea
+        rows={6}
+        placeholder={t.input}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+      />
       <div className="flex items-center gap-2">
         <Select value={algo} onValueChange={(v) => setAlgo(v as HashAlgo)}>
-          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {HASH_ALGOS.map((a) => (
-              <SelectItem key={a} value={a}>{a}</SelectItem>
+              <SelectItem key={a} value={a}>
+                {a}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Button size="sm" onClick={() => void run()}>{t.hash}</Button>
+        <Button size="sm" onClick={() => void run()}>
+          {t.hash}
+        </Button>
       </div>
       {output && (
         <div className="flex items-center gap-2">
@@ -388,7 +429,12 @@ function RegexTab() {
           className="w-20 font-mono"
         />
       </div>
-      <Textarea rows={8} placeholder={t.input} value={text} onChange={(e) => setText(e.target.value)} />
+      <Textarea
+        rows={8}
+        placeholder={t.input}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <div className="rounded-lg border bg-muted/20 p-2">
         <p className="mb-2 text-xs text-muted-foreground">
@@ -462,11 +508,7 @@ function TimeTab() {
         <RefreshCw className="size-3.5" />
         Now
       </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={() => void copyText(`${unix}\n${iso}`, t.copied)}
-      >
+      <Button size="sm" variant="ghost" onClick={() => void copyText(`${unix}\n${iso}`, t.copied)}>
         <Copy className="size-3.5" />
         {t.copyResult}
       </Button>

@@ -53,7 +53,10 @@ export function CpuCard({ stats, history }: Props) {
           >
             {t.openWidget}
           </Button>
-          <Badge variant="secondary" className="min-w-[4.5ch] justify-center font-mono tabular-nums">
+          <Badge
+            variant="secondary"
+            className="min-w-[4.5ch] justify-center font-mono tabular-nums"
+          >
             {stats ? formatPercent(usage, tag) : <StatSkeleton />}
           </Badge>
         </div>
@@ -160,7 +163,10 @@ export function GpuCard({ stats, history }: Props) {
             <HardDrive className="size-4 text-primary" />
             {t.gpu}
           </CardTitle>
-          <Badge variant="secondary" className="min-w-[4.5ch] justify-center font-mono tabular-nums">
+          <Badge
+            variant="secondary"
+            className="min-w-[4.5ch] justify-center font-mono tabular-nums"
+          >
             {formatPercent(0, tag)}
           </Badge>
         </CardHeader>
@@ -176,13 +182,9 @@ export function GpuCard({ stats, history }: Props) {
             </div>
             <div className="flex items-center gap-1.5">
               <Thermometer className="size-3.5" />
-              <span>
-                {t.temperature}: —°C
-              </span>
+              <span>{t.temperature}: —°C</span>
             </div>
-            <div className="col-span-2">
-              {t.power}: —
-            </div>
+            <div className="col-span-2">{t.power}: —</div>
           </div>
         </CardContent>
       </Card>
@@ -248,9 +250,7 @@ export function DiskCard({ stats }: { stats: SystemStats | null }) {
             return (
               <div key={`${disk.mount_point}-${disk.name}`} className="space-y-1">
                 <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="truncate font-medium">
-                    {disk.mount_point || disk.name}
-                  </span>
+                  <span className="truncate font-medium">{disk.mount_point || disk.name}</span>
                   <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
                     {formatPercent(pct, tag)}
                   </span>

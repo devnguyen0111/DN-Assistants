@@ -88,10 +88,7 @@ export async function fetchWeather(
     "current",
     "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m",
   );
-  url.searchParams.set(
-    "daily",
-    "weather_code,temperature_2m_max,temperature_2m_min",
-  );
+  url.searchParams.set("daily", "weather_code,temperature_2m_max,temperature_2m_min");
   url.searchParams.set("timezone", "auto");
   url.searchParams.set("forecast_days", "7");
   url.searchParams.set("temperature_unit", temperatureUnit);

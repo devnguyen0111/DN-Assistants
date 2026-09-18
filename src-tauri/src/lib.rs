@@ -195,49 +195,7 @@ pub fn run() {
 
             #[cfg(desktop)]
             {
-                app.handle().plugin(tauri_plugin_process::init())?;
-                app.handle()
-                    .plugin(tauri_plugin_updater::Builder::new().build())?;
-                app.handle()
-                    .plugin(tauri_plugin_window_state::Builder::default().build())?;
-                app.handle()
-                    .plugin(tauri_plugin_store::Builder::default().build())?;
-                app.handle().plugin(tauri_plugin_autostart::init(
-                    tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-                    None,
-                ))?;
-
-                // Global shortcuts are registered from the frontend via
-                // @tauri-apps/plugin-global-shortcut (see syncGlobalHotkeys).
-                app.handle()
-                    .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
-
-                let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
-                let hide_i = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
-                let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-                let menu = Menu::with_items(app, &[&show_i, &hide_i, &quit_i])?;
-
-                let _tray = TrayIconBuilder::with_id("main-tray")
-                    .icon(app.default_window_icon().unwrap().clone())
-                    .menu(&menu)
-                    .tooltip("DN Assistant")
-                    .on_menu_event(|app, event| match event.id.as_ref() {
-                        "show" => show_main_window(app),
-                        "hide" => hide_main_window(app),
-                        "quit" => app.exit(0),
-                        _ => {}
-                    })
-                    .on_tray_icon_event(|tray, event| {
-                        if let TrayIconEvent::Click {
-                            button: MouseButton::Left,
-                            button_state: MouseButtonState::Up,
-                            ..
-                        } = event
-                        {
-                            show_main_window(tray.app_handle());
-                        }
-                    })
-                    .build(app)?;
+                init_desktop_shell(app);
             }
             Ok(())
         })
@@ -254,5 +212,77 @@ pub fn run() {
             }
         })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|err| {
+            eprintln!("DN Assistant failed to start: {err}");
+        });
+}
+
+/// Desktop plugins/tray must not abort the process. 0.1.1 used `?` + `panic=abort`,
+/// which Windows Event Viewer reports as 0xc0000409 when a plugin or tray init fails.
+#[cfg(desktop)]
+fn init_desktop_shell(app: &mut tauri::App) {
+    let handle = app.handle().clone();
+    if let Err(err) = handle.plugin(tauri_plugin_process::init()) {
+        eprintln!("process plugin: {err}");
+    }
+    if let Err(err) = handle.plugin(tauri_plugin_updater::Builder::new().build()) {
+        eprintln!("updater plugin: {err}");
+    }
+    if let Err(err) = handle.plugin(tauri_plugin_window_state::Builder::default().build()) {
+        eprintln!("window-state plugin: {err}");
+    }
+    if let Err(err) = handle.plugin(tauri_plugin_store::Builder::default().build()) {
+        eprintln!("store plugin: {err}");
+    }
+    if let Err(err) = handle.plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        None,
+    )) {
+        eprintln!("autostart plugin: {err}");
+    }
+    // Shortcuts are registered from the frontend (syncGlobalHotkeys).
+    if let Err(err) = handle.plugin(tauri_plugin_global_shortcut::Builder::new().build()) {
+        eprintln!("global-shortcut plugin: {err}");
+    }
+
+    let Ok(show_i) = MenuItem::with_id(app, "show", "Show", true, None::<&str>) else {
+        return;
+    };
+    let Ok(hide_i) = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>) else {
+        return;
+    };
+    let Ok(quit_i) = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>) else {
+        return;
+    };
+    let Ok(menu) = Menu::with_items(app, &[&show_i, &hide_i, &quit_i]) else {
+        return;
+    };
+
+    let mut tray = TrayIconBuilder::with_id("main-tray")
+        .menu(&menu)
+        .tooltip("DN Assistant")
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => show_main_window(app),
+            "hide" => hide_main_window(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+
+    if let Err(err) = tray.build(app) {
+        eprintln!("tray icon: {err}");
+    }
 }

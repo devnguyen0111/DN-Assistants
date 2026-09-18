@@ -162,9 +162,7 @@ const SOURCES = [fetchFromOpenErApi, fetchFromFawaz, fetchFromFrankfurter];
  * Fetch latest USD-based exchange rates, caching the result for offline fallback.
  * Primary source includes VND (Frankfurter/ECB does not).
  */
-export async function fetchRates(
-  force = false,
-): Promise<RatesPayload & { fromCache: boolean }> {
+export async function fetchRates(force = false): Promise<RatesPayload & { fromCache: boolean }> {
   if (!force) {
     const cached = await readCache();
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS && cached.rates.VND) {

@@ -94,10 +94,7 @@ export function parseGooglePasswordCsv(text: string): GooglePasswordRow[] {
     const url = urlIdx >= 0 ? (cols[urlIdx] ?? "").trim() : "";
     const username = userIdx >= 0 ? (cols[userIdx] ?? "").trim() : "";
     const title =
-      (nameIdx >= 0 ? (cols[nameIdx] ?? "").trim() : "") ||
-      url ||
-      username ||
-      "Untitled";
+      (nameIdx >= 0 ? (cols[nameIdx] ?? "").trim() : "") || url || username || "Untitled";
     const note = noteIdx >= 0 ? (cols[noteIdx] ?? "").trim() : "";
     out.push({ title, url, username, password, note });
   }

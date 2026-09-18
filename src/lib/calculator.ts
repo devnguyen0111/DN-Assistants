@@ -33,9 +33,8 @@ export function tokenize(expression: string): Token[] {
       const unary =
         (ch === "+" || ch === "-") &&
         (tokens.length === 0 ||
-          (tokens[tokens.length - 1].type === "op") ||
-          (tokens[tokens.length - 1].type === "paren" &&
-            tokens[tokens.length - 1].value === "("));
+          tokens[tokens.length - 1].type === "op" ||
+          (tokens[tokens.length - 1].type === "paren" && tokens[tokens.length - 1].value === "("));
       if (unary) {
         let j = i + 1;
         while (j < src.length && ((src[j] >= "0" && src[j] <= "9") || src[j] === ".")) j += 1;
@@ -88,7 +87,10 @@ function toRpn(tokens: Token[]): Token[] {
       stack.push(token);
       continue;
     }
-    while (stack.length > 0 && !(stack[stack.length - 1].type === "paren" && stack[stack.length - 1].value === "(")) {
+    while (
+      stack.length > 0 &&
+      !(stack[stack.length - 1].type === "paren" && stack[stack.length - 1].value === "(")
+    ) {
       output.push(stack.pop()!);
     }
     if (stack.length === 0) throw new Error("Mismatched parentheses");

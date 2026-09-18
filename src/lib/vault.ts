@@ -167,9 +167,7 @@ async function decryptRow(key: CryptoKey, row: VaultRow): Promise<VaultEntry> {
 async function reloadCache(): Promise<VaultEntry[]> {
   const key = await requireKey();
   const db = await getDb();
-  const rows = await db.select<VaultRow[]>(
-    "SELECT * FROM vault_entries ORDER BY updated_at DESC",
-  );
+  const rows = await db.select<VaultRow[]>("SELECT * FROM vault_entries ORDER BY updated_at DESC");
   const entries: VaultEntry[] = [];
   for (const row of rows) {
     try {
@@ -201,9 +199,7 @@ export function searchVaultEntries(query: string, entries?: VaultEntry[]): Vault
   );
 }
 
-export async function createVaultEntry(
-  input: VaultEntryPayload,
-): Promise<VaultEntry> {
+export async function createVaultEntry(input: VaultEntryPayload): Promise<VaultEntry> {
   const key = await requireKey();
   const db = await getDb();
   const now = new Date().toISOString();
@@ -233,10 +229,7 @@ export async function createVaultEntry(
   return entry;
 }
 
-export async function updateVaultEntry(
-  id: string,
-  input: VaultEntryPayload,
-): Promise<void> {
+export async function updateVaultEntry(id: string, input: VaultEntryPayload): Promise<void> {
   const key = await requireKey();
   const db = await getDb();
   const now = new Date().toISOString();
@@ -254,9 +247,7 @@ export async function updateVaultEntry(
     [nonce, ciphertext, now, id],
   );
   if (cache) {
-    cache = cache.map((e) =>
-      e.id === id ? { ...e, ...payload, updated_at: now } : e,
-    );
+    cache = cache.map((e) => (e.id === id ? { ...e, ...payload, updated_at: now } : e));
   }
   notifyChanged();
 }

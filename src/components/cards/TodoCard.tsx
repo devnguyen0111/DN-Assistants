@@ -26,12 +26,7 @@ import {
   type TodoPriority,
   type TodoRepeat,
 } from "@/lib/todos";
-import {
-  createEvent,
-  listEvents,
-  listUpcoming,
-  type CalendarEvent,
-} from "@/lib/events";
+import { createEvent, listEvents, listUpcoming, type CalendarEvent } from "@/lib/events";
 import { cn } from "@/lib/utils";
 
 const PRIORITY_ORDER: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 };
@@ -218,11 +213,7 @@ export function TodoCard() {
               <SelectItem value="high">{t.todoPriorityHigh}</SelectItem>
             </SelectContent>
           </Select>
-          <Input
-            type="datetime-local"
-            value={newDue}
-            onChange={(e) => setNewDue(e.target.value)}
-          />
+          <Input type="datetime-local" value={newDue} onChange={(e) => setNewDue(e.target.value)} />
           <Select value={newRepeat} onValueChange={(v) => setNewRepeat(v as TodoRepeat)}>
             <SelectTrigger>
               <SelectValue placeholder={t.repeat} />

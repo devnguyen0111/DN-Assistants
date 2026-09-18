@@ -1,10 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
-import {
-  deriveVaultKey,
-  encryptString,
-  decryptString,
-  randomBytes,
-} from "@/lib/vault-crypto";
+import { deriveVaultKey, encryptString, decryptString, randomBytes } from "@/lib/vault-crypto";
 import { loadSettings, saveSettings, type AppSettings } from "@/lib/settings";
 import { listEvents, upsertEventFromImport, type CalendarEvent } from "@/lib/events";
 import { listNotes, upsertNote, type Note } from "@/lib/notes";

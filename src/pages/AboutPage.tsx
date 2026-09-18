@@ -19,7 +19,11 @@ import {
   Timer,
   Flame,
   Keyboard,
+  ArrowUpCircle,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { promptUpdateIfAvailable } from "@/lib/updates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +93,7 @@ export function AboutPage({ onNavigate }: Props) {
   const scope = useRef<ReturnType<typeof createScope> | null>(null);
   const [osInfo, setOsInfo] = useState<OsInfo | null>(null);
   const [version, setVersion] = useState("…");
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => {
     void loadOsInfo().then(setOsInfo);
@@ -147,6 +152,34 @@ export function AboutPage({ onNavigate }: Props) {
             <Button
               variant="outline"
               size="sm"
+              disabled={checkingUpdate}
+              onClick={async () => {
+                setCheckingUpdate(true);
+                try {
+                  const res = await promptUpdateIfAvailable({ forceShow: true });
+                  if (res.status === "up-to-date") {
+                    toast.success(t.upToDate);
+                  } else if (res.status === "error") {
+                    toast.error(res.message);
+                  } else if (res.status === "unavailable") {
+                    toast.info(t.unavailable);
+                  }
+                } finally {
+                  setCheckingUpdate(false);
+                }
+              }}
+              className="gap-1.5"
+            >
+              {checkingUpdate ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <ArrowUpCircle className="size-3.5 text-primary" />
+              )}
+              {t.checkForUpdates}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => void updateSettings({ onboardingDone: false })}
             >
               {t.aboutReplayOnboarding}
@@ -182,7 +215,9 @@ export function AboutPage({ onNavigate }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>{t.aboutCatalogTitle}</CardTitle>
-          <CardDescription>{t.navGroupMain} · {t.navGroupTools} · {t.navGroupSystem}</CardDescription>
+          <CardDescription>
+            {t.navGroupMain} · {t.navGroupTools} · {t.navGroupSystem}
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {CATALOG.map((item) => {

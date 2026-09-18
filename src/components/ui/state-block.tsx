@@ -39,9 +39,7 @@ function EmptyState({ title, description, action, className, icon }: StateBlockP
 function ErrorState({ title, description, action, className, icon }: StateBlockProps) {
   return (
     <div className={cn("flex flex-col items-center gap-3 py-8 text-center", className)}>
-      <div className="text-destructive">
-        {icon ?? <AlertTriangle className="h-10 w-10" />}
-      </div>
+      <div className="text-destructive">{icon ?? <AlertTriangle className="h-10 w-10" />}</div>
       {title ? <p className="text-sm font-semibold">{title}</p> : null}
       {description ? <p className="max-w-sm text-sm text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-1">{action}</div> : null}

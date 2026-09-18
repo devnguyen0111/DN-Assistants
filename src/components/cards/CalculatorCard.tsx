@@ -77,16 +77,19 @@ export function CalculatorCard() {
   const [dataFrom, setDataFrom] = useState<DataUnit>("GB");
   const [dataTo, setDataTo] = useState<DataUnit>("GiB");
 
-  const inputDigit = useCallback((digit: string) => {
-    setDisplay((prev) => {
-      if (fresh || prev === "0" || prev === "Error") {
-        setFresh(false);
-        return digit === "." ? "0." : digit;
-      }
-      if (digit === "." && prev.includes(".")) return prev;
-      return prev + digit;
-    });
-  }, [fresh]);
+  const inputDigit = useCallback(
+    (digit: string) => {
+      setDisplay((prev) => {
+        if (fresh || prev === "0" || prev === "Error") {
+          setFresh(false);
+          return digit === "." ? "0." : digit;
+        }
+        if (digit === "." && prev.includes(".")) return prev;
+        return prev + digit;
+      });
+    },
+    [fresh],
+  );
 
   const applyOp = useCallback(
     (op: string) => {

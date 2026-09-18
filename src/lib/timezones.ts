@@ -156,9 +156,9 @@ function listIanaZones(): string[] {
   } catch {
     // fall through
   }
-  return Array.from(
-    new Set([PRIMARY_IANA, ...POPULAR_IANA, ...Object.keys(FRIENDLY)]),
-  ).sort((a, b) => a.localeCompare(b));
+  return Array.from(new Set([PRIMARY_IANA, ...POPULAR_IANA, ...Object.keys(FRIENDLY)])).sort(
+    (a, b) => a.localeCompare(b),
+  );
 }
 
 let catalogCache: ZoneOption[] | null = null;
@@ -180,12 +180,7 @@ export const PRIMARY_ZONE: ZoneOption = makeZone(PRIMARY_IANA, new Date());
 /** Prefer `getZoneCatalog()` — catalog is built lazily on first use. */
 
 const STORAGE_KEY = "dn-assistant-watch-zones";
-const DEFAULT_WATCH = [
-  "UTC",
-  "Europe/London",
-  "America/New_York",
-  "Asia/Tokyo",
-];
+const DEFAULT_WATCH = ["UTC", "Europe/London", "America/New_York", "Asia/Tokyo"];
 
 export function normalizeZoneId(id: string): string | null {
   const mapped = LEGACY_ID_MAP[id] ?? id;
@@ -241,11 +236,7 @@ export function zoneLabel(zone: ZoneOption, locale: "vi" | "en") {
   return locale === "vi" ? zone.labelVi : zone.labelEn;
 }
 
-export function searchZones(
-  zones: ZoneOption[],
-  query: string,
-  locale: "vi" | "en",
-): ZoneOption[] {
+export function searchZones(zones: ZoneOption[], query: string, locale: "vi" | "en"): ZoneOption[] {
   const q = query.trim().toLowerCase();
   if (!q) {
     const popular = POPULAR_IANA.map((iana) => zones.find((z) => z.iana === iana)).filter(
@@ -281,7 +272,10 @@ export function searchZones(
     if (city.startsWith(q) || label.startsWith(q)) score += 40;
     if (zone.iana.toLowerCase().includes(q)) score += 20;
     if ((POPULAR_IANA as readonly string[]).includes(zone.iana)) score += 10;
-    if (zone.gmt.toLowerCase().includes(q) || zone.gmt.toLowerCase().replace("gmt", "").includes(q)) {
+    if (
+      zone.gmt.toLowerCase().includes(q) ||
+      zone.gmt.toLowerCase().replace("gmt", "").includes(q)
+    ) {
       score += 15;
     }
     scored.push({ zone, score });

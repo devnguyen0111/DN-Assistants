@@ -56,8 +56,7 @@ export function ClockCard() {
   const scope = useRef<ReturnType<typeof createScope> | null>(null);
   const prevSecond = useRef(-1);
 
-  const primaryZone =
-    getZoneById(settings.primaryTimezone) ??
+  const primaryZone = getZoneById(settings.primaryTimezone) ??
     getZoneById(PRIMARY_IANA) ?? {
       id: PRIMARY_IANA,
       iana: PRIMARY_IANA,
@@ -86,8 +85,14 @@ export function ClockCard() {
     scope.current?.revert();
     scope.current = createScope({ root: timeRef }).add(() => {
       animate(".clock-digit", {
-        y: [{ to: -6, duration: 80 }, { to: 0, duration: 180 }],
-        opacity: [{ to: 0.55, duration: 80 }, { to: 1, duration: 180 }],
+        y: [
+          { to: -6, duration: 80 },
+          { to: 0, duration: 180 },
+        ],
+        opacity: [
+          { to: 0.55, duration: 80 },
+          { to: 1, duration: 180 },
+        ],
         ease: "outQuad",
       });
     });
@@ -148,10 +153,7 @@ export function ClockCard() {
   );
 
   const availableToAdd = useMemo(
-    () =>
-      catalog.filter(
-        (z) => z.iana !== settings.primaryTimezone && !watchIds.includes(z.id),
-      ),
+    () => catalog.filter((z) => z.iana !== settings.primaryTimezone && !watchIds.includes(z.id)),
     [catalog, watchIds, settings.primaryTimezone],
   );
 
@@ -341,10 +343,7 @@ export function ClockCard() {
                 const parts = zonedParts(now, zone.iana);
                 const delta = dayDeltaLabel(primary, parts, t.yesterday, t.tomorrow);
                 return (
-                  <div
-                    key={zone.id}
-                    className="relative rounded-lg border bg-card/60 px-3 py-2.5"
-                  >
+                  <div key={zone.id} className="relative rounded-lg border bg-card/60 px-3 py-2.5">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -372,9 +371,7 @@ export function ClockCard() {
                       <p className="mt-1 font-mono text-2xl font-semibold tabular-nums tracking-tight">
                         <span className="inline-block min-w-[8ch]">
                           {parts.hours}:{parts.minutes}
-                          <span className="text-base text-muted-foreground">
-                            :{parts.seconds}
-                          </span>
+                          <span className="text-base text-muted-foreground">:{parts.seconds}</span>
                         </span>
                       </p>
                       <p className="text-xs text-muted-foreground">

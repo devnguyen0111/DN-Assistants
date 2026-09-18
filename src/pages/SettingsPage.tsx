@@ -23,18 +23,16 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { useTheme, type ThemeMode } from "@/lib/theme";
 import { useSettings } from "@/lib/settings-context";
-import {
-  ACCENT_OPTIONS,
-  DEFAULT_SETTINGS,
-  type AccentColor,
-  type Density,
-} from "@/lib/settings";
+import { ACCENT_OPTIONS, DEFAULT_SETTINGS, type AccentColor, type Density } from "@/lib/settings";
 import { PRIMARY_IANA, POPULAR_IANA, getZoneById, zoneLabel } from "@/lib/timezones";
 import { clearClipboardHistory } from "@/lib/clipboard-history";
 import {
   checkForAppUpdate,
-  downloadAndInstallUpdate,
+  openGitHubReleasePage,
+  showUpdateDialog,
+  type UpdateInfo,
 } from "@/lib/updates";
+import { Loader2, ArrowUpCircle, ExternalLink } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +55,8 @@ export function SettingsPage() {
   const [autostart, setAutostart] = useState(false);
   const [autostartReady, setAutostartReady] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
   const [pendingImportPath, setPendingImportPath] = useState<string | null>(null);
   const [backupOpen, setBackupOpen] = useState<"export" | "restore" | null>(null);
@@ -95,7 +95,9 @@ export function SettingsPage() {
   };
 
   const checkUpdates = async () => {
+    setIsCheckingUpdate(true);
     setUpdateStatus(null);
+    setAvailableUpdate(null);
     try {
       const result = await checkForAppUpdate();
       if (result.status === "unavailable") {
@@ -110,10 +112,13 @@ export function SettingsPage() {
         setUpdateStatus(t.upToDate);
         return;
       }
-      setUpdateStatus(`${t.updateAvailable}: ${result.version}`);
-      await downloadAndInstallUpdate();
+      setAvailableUpdate(result.info);
+      setUpdateStatus(`${t.updateAvailable}: v${result.info.version}`);
+      showUpdateDialog(result.info);
     } catch (err) {
       setUpdateStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsCheckingUpdate(false);
     }
   };
 
@@ -639,11 +644,56 @@ export function SettingsPage() {
           <CardTitle>{t.settingsUpdates}</CardTitle>
           <CardDescription>{t.settingsUpdatesDesc}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Button onClick={() => void checkUpdates()}>{t.checkForUpdates}</Button>
-          {updateStatus && (
-            <p className="text-sm text-muted-foreground">{updateStatus}</p>
-          )}
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium">{t.settingsAutoCheckUpdates}</Label>
+              <p className="text-xs text-muted-foreground">{t.settingsAutoCheckUpdatesDesc}</p>
+            </div>
+            <Switch
+              checked={settings.autoCheckUpdates}
+              onCheckedChange={(v) => void updateSettings({ autoCheckUpdates: v })}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => void checkUpdates()}
+              disabled={isCheckingUpdate}
+              className="gap-1.5"
+            >
+              {isCheckingUpdate ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t.checkingForUpdates}
+                </>
+              ) : (
+                t.checkForUpdates
+              )}
+            </Button>
+
+            {availableUpdate && (
+              <Button
+                variant="outline"
+                onClick={() => showUpdateDialog(availableUpdate)}
+                className="gap-1.5"
+              >
+                <ArrowUpCircle className="size-4 text-primary" />
+                {t.updateViewDetails} (v{availableUpdate.version})
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              onClick={() => void openGitHubReleasePage()}
+              className="gap-1.5"
+            >
+              <ExternalLink className="size-4" />
+              {t.updateViaBrowser}
+            </Button>
+          </div>
+
+          {updateStatus && <p className="text-sm text-muted-foreground">{updateStatus}</p>}
         </CardContent>
       </Card>
 

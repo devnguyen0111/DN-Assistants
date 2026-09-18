@@ -135,8 +135,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   }, [cursor]);
 
   const monthLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat(tag, { month: "long", year: "numeric" }).format(cursor),
+    () => new Intl.DateTimeFormat(tag, { month: "long", year: "numeric" }).format(cursor),
     [cursor, tag],
   );
 
@@ -247,9 +246,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
     const next = !muted;
     setSoundMuted(next);
     setMuted(next);
-    void import("@/lib/settings").then(({ saveSettings }) =>
-      saveSettings({ soundMuted: next }),
-    );
+    void import("@/lib/settings").then(({ saveSettings }) => saveSettings({ soundMuted: next }));
   };
 
   const save = async () => {
@@ -312,7 +309,12 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
           <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
             <CardTitle>{t.calendar}</CardTitle>
             <div className="flex flex-wrap items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={toggleMute} title={muted ? t.soundOff : t.soundOn}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleMute}
+                title={muted ? t.soundOff : t.soundOn}
+              >
                 {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
               </Button>
               <Button variant="outline" size="sm" onClick={goToday}>
@@ -327,7 +329,9 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
               >
                 <ChevronLeft className="size-4" />
               </Button>
-              <span className="min-w-32 text-center text-sm font-medium capitalize">{monthLabel}</span>
+              <span className="min-w-32 text-center text-sm font-medium capitalize">
+                {monthLabel}
+              </span>
               <Button
                 variant="ghost"
                 size="icon"

@@ -1,12 +1,6 @@
 import type { AppRoute } from "@/lib/routing";
 
-export type AccentColor =
-  | "teal"
-  | "blue"
-  | "violet"
-  | "rose"
-  | "amber"
-  | "emerald";
+export type AccentColor = "teal" | "blue" | "violet" | "rose" | "amber" | "emerald";
 
 export type Density = "comfortable" | "compact";
 
@@ -38,6 +32,8 @@ export type AppSettings = {
   lastRoute: AppRoute;
   morningBriefEnabled: boolean;
   hibpCheckEnabled: boolean;
+  autoCheckUpdates: boolean;
+  skippedUpdateVersion: string;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -68,18 +64,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   lastRoute: "home",
   morningBriefEnabled: false,
   hibpCheckEnabled: false,
+  autoCheckUpdates: true,
+  skippedUpdateVersion: "",
 };
 
-export const ACCENT_OPTIONS: AccentColor[] = [
-  "teal",
-  "blue",
-  "violet",
-  "rose",
-  "amber",
-  "emerald",
-];
+export const ACCENT_OPTIONS: AccentColor[] = ["teal", "blue", "violet", "rose", "amber", "emerald"];
 
-export const APP_VERSION = "0.2.0";
+export const APP_VERSION = "0.2.1";
 
 const LS_KEY = "dn-assistant-settings";
 const STORE_FILE = "settings.json";

@@ -204,7 +204,9 @@ export function TikTokStreakCard() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => void deleteTikTokStreak(item.id).then(() => toast.success(t.deleted))}
+                          onClick={() =>
+                            void deleteTikTokStreak(item.id).then(() => toast.success(t.deleted))
+                          }
                           title={t.delete}
                         >
                           <Trash2 className="size-4" />
@@ -220,7 +222,13 @@ export function TikTokStreakCard() {
                       <span className="text-muted-foreground">
                         {t.tiktokBest.replace("{n}", String(item.longestStreak))}
                       </span>
-                      <span className={done ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
+                      <span
+                        className={
+                          done
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-amber-600 dark:text-amber-400"
+                        }
+                      >
                         {done ? t.tiktokDoneToday : t.tiktokPending}
                       </span>
                     </div>
@@ -230,11 +238,19 @@ export function TikTokStreakCard() {
                     </p>
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Button size="sm" variant={done ? "outline" : "default"} onClick={() => void mark(item, !done)}>
+                      <Button
+                        size="sm"
+                        variant={done ? "outline" : "default"}
+                        onClick={() => void mark(item, !done)}
+                      >
                         {done ? <Undo2 className="size-3.5" /> : <Check className="size-3.5" />}
                         {done ? t.tiktokUndoDone : t.tiktokMarkDone}
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => void openTikTok(item.username)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void openTikTok(item.username)}
+                      >
                         <ExternalLink className="size-3.5" />
                         {t.tiktokOpen}
                       </Button>

@@ -1,6 +1,4 @@
-export type JsonFormatResult =
-  | { ok: true; formatted: string }
-  | { ok: false; error: string };
+export type JsonFormatResult = { ok: true; formatted: string } | { ok: false; error: string };
 
 export function formatJson(input: string, indent = 2): JsonFormatResult {
   try {

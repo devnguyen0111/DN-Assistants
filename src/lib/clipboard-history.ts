@@ -94,10 +94,9 @@ async function removeImageFile(path: string) {
 
 export async function deleteItem(id: string): Promise<void> {
   const db = await getDb();
-  const rows = await db.select<ClipboardItem[]>(
-    "SELECT * FROM clipboard_items WHERE id = $1",
-    [id],
-  );
+  const rows = await db.select<ClipboardItem[]>("SELECT * FROM clipboard_items WHERE id = $1", [
+    id,
+  ]);
   const item = rows[0];
   await db.execute("DELETE FROM clipboard_items WHERE id = $1", [id]);
   if (item && item.kind === "image" && item.content) {
@@ -165,10 +164,7 @@ export async function upsertClipboardItem(content: string): Promise<ClipboardIte
 
   if (existing.length > 0) {
     const item = existing[0];
-    await db.execute("UPDATE clipboard_items SET created_at = $1 WHERE id = $2", [
-      now,
-      item.id,
-    ]);
+    await db.execute("UPDATE clipboard_items SET created_at = $1 WHERE id = $2", [now, item.id]);
     notifyChanged();
     return normalizeItem({ ...item, created_at: now });
   }
@@ -223,10 +219,7 @@ export async function upsertClipboardImage(payload: {
 
   if (existing.length > 0) {
     const item = existing[0];
-    await db.execute("UPDATE clipboard_items SET created_at = $1 WHERE id = $2", [
-      now,
-      item.id,
-    ]);
+    await db.execute("UPDATE clipboard_items SET created_at = $1 WHERE id = $2", [now, item.id]);
     // Drop the newly written duplicate file if path differs.
     if (payload.path && payload.path !== item.content) {
       await removeImageFile(payload.path);

@@ -229,10 +229,7 @@ export function sameDay(a: number, b: number) {
   );
 }
 
-export function formatEventRange(
-  event: CalendarEvent,
-  allDayLabel: string,
-): string {
+export function formatEventRange(event: CalendarEvent, allDayLabel: string): string {
   if (event.all_day === 1) return allDayLabel;
   const start = formatHm(event.start_at);
   if (event.end_at != null) {

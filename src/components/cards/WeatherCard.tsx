@@ -212,9 +212,7 @@ export function WeatherCard({ compact = false, className }: Props) {
                     <Droplets className="size-3" />
                     {t.weatherHumidity}
                   </p>
-                  <p className="font-mono font-medium tabular-nums">
-                    {weather.current.humidity}%
-                  </p>
+                  <p className="font-mono font-medium tabular-nums">{weather.current.humidity}%</p>
                 </div>
                 <div className="rounded-lg border bg-muted/20 p-3">
                   <p className="flex items-center gap-1 text-xs text-muted-foreground">

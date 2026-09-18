@@ -15,10 +15,7 @@ import { useSettings } from "@/lib/settings-context";
 export function WhatsNewDialog() {
   const { t } = useI18n();
   const { settings, updateSettings, ready } = useSettings();
-  const open =
-    ready &&
-    settings.onboardingDone &&
-    settings.whatsNewSeenVersion !== APP_VERSION;
+  const open = ready && settings.onboardingDone && settings.whatsNewSeenVersion !== APP_VERSION;
 
   return (
     <Dialog

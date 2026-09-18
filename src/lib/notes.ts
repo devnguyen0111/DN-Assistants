@@ -45,9 +45,7 @@ function normalize(row: Note): Note {
 
 export async function listNotes(): Promise<Note[]> {
   const db = await getDb();
-  const rows = await db.select<Note[]>(
-    "SELECT * FROM notes ORDER BY pinned DESC, updated_at DESC",
-  );
+  const rows = await db.select<Note[]>("SELECT * FROM notes ORDER BY pinned DESC, updated_at DESC");
   return rows.map(normalize);
 }
 

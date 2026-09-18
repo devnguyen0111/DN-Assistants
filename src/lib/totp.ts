@@ -40,7 +40,7 @@ function counterToBytes(counter: number): Uint8Array {
 function sha1(message: Uint8Array): Uint8Array {
   const ml = message.length;
   const bitLen = ml * 8;
-  const totalLen = ((ml + 1 + 8 + 63) & ~63);
+  const totalLen = (ml + 1 + 8 + 63) & ~63;
   const bytes = new Uint8Array(totalLen);
   bytes.set(message);
   bytes[ml] = 0x80;
@@ -87,7 +87,7 @@ function sha1(message: Uint8Array): Uint8Array {
       const temp = (((a << 5) | (a >>> 27)) + f + e + k + w[j]!) | 0;
       e = d;
       d = c;
-      c = ((b << 30) | (b >>> 2)) | 0;
+      c = (b << 30) | (b >>> 2) | 0;
       b = a;
       a = temp;
     }

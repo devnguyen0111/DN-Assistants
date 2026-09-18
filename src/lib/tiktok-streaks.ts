@@ -175,11 +175,9 @@ export async function updateTikTokStreak(
     return {
       ...item,
       name: patch.name !== undefined ? patch.name.trim() : item.name,
-      username:
-        patch.username !== undefined ? normalizeUsername(patch.username) : item.username,
+      username: patch.username !== undefined ? normalizeUsername(patch.username) : item.username,
       enabled: patch.enabled ?? item.enabled,
-      remindAt:
-        patch.remindAt && parseHm(patch.remindAt) ? patch.remindAt : item.remindAt,
+      remindAt: patch.remindAt && parseHm(patch.remindAt) ? patch.remindAt : item.remindAt,
       nudgeAt: patch.nudgeAt && parseHm(patch.nudgeAt) ? patch.nudgeAt : item.nudgeAt,
       hint: patch.hint !== undefined ? patch.hint.trim() : item.hint,
       updatedAt: new Date().toISOString(),

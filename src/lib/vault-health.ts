@@ -11,9 +11,7 @@ export function passwordStrength(pw: string): "weak" | "ok" {
 }
 
 /** Entry ids that share a non-empty password with at least one other entry. */
-export function findReusedPasswords(
-  entries: { id: string; password: string }[],
-): Set<string> {
+export function findReusedPasswords(entries: { id: string; password: string }[]): Set<string> {
   const byPassword = new Map<string, string[]>();
   for (const entry of entries) {
     if (!entry.password) continue;

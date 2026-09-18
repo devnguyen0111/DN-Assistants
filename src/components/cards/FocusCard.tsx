@@ -203,13 +203,7 @@ export function FocusCard() {
 
         <div className="relative flex size-56 items-center justify-center">
           <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100">
-            <circle
-              cx="50"
-              cy="50"
-              r="45"
-              className="fill-none stroke-muted"
-              strokeWidth="6"
-            />
+            <circle cx="50" cy="50" r="45" className="fill-none stroke-muted" strokeWidth="6" />
             <circle
               cx="50"
               cy="50"

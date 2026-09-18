@@ -87,12 +87,7 @@ export function CurrencyCard() {
     return convert(1, to, from, rates);
   }, [rates, from, to]);
 
-  const missing =
-    rates && (!rates[from] || !rates[to])
-      ? !rates[from]
-        ? from
-        : to
-      : null;
+  const missing = rates && (!rates[from] || !rates[to]) ? (!rates[from] ? from : to) : null;
 
   const swap = () => {
     setFrom(to);
@@ -225,9 +220,7 @@ export function CurrencyCard() {
                 </span>
               )}
             </div>
-            {source && (
-              <p className="text-[11px] text-muted-foreground">{t.currencySource}</p>
-            )}
+            {source && <p className="text-[11px] text-muted-foreground">{t.currencySource}</p>}
           </>
         )}
       </CardContent>

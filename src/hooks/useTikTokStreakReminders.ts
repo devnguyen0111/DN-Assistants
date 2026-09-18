@@ -20,11 +20,7 @@ function currentMinutes(now = new Date()): number {
   return now.getHours() * 60 + now.getMinutes();
 }
 
-function shouldNotify(
-  item: TikTokStreak,
-  kind: "remind" | "nudge",
-  now: Date,
-): boolean {
+function shouldNotify(item: TikTokStreak, kind: "remind" | "nudge", now: Date): boolean {
   if (!item.enabled || isDoneToday(item)) return false;
   const today = localDateKey(now);
   const key = `tiktok:${item.id}:${today}:${kind}`;
@@ -67,9 +63,7 @@ export function useTikTokStreakReminders() {
           const key = `tiktok:${item.id}:${today}:${kind}`;
           markFired(key, now.getTime());
           const title = kind === "nudge" ? t.tiktokNudge : t.tiktokReminder;
-          const body = title
-            .replace("{name}", item.name)
-            .replace("{n}", String(item.streakCount));
+          const body = title.replace("{name}", item.name).replace("{n}", String(item.streakCount));
           toast(body, { description: t.tiktokDisclaimer });
           playReminderChime();
           void showOsNotification(t.tiktokTitle, body);

@@ -84,9 +84,7 @@ export function HomePage({ onNavigate }: Props) {
   );
 
   const ramPct =
-    stats && stats.memory.total > 0
-      ? (stats.memory.used / stats.memory.total) * 100
-      : 0;
+    stats && stats.memory.total > 0 ? (stats.memory.used / stats.memory.total) * 100 : 0;
 
   const greet = t[greetingKey(Number(primary.hours))];
 
@@ -285,7 +283,11 @@ export function HomePage({ onNavigate }: Props) {
                   {t.cpu}
                 </div>
                 <p className="font-mono text-xl font-semibold tabular-nums">
-                  {stats ? formatPercent(stats.global_cpu_usage, tag) : <Skeleton className="inline-block h-7 w-16" />}
+                  {stats ? (
+                    formatPercent(stats.global_cpu_usage, tag)
+                  ) : (
+                    <Skeleton className="inline-block h-7 w-16" />
+                  )}
                 </p>
               </div>
               <div className="rounded-lg border bg-muted/20 p-3">
@@ -294,7 +296,11 @@ export function HomePage({ onNavigate }: Props) {
                   {t.ram}
                 </div>
                 <p className="font-mono text-xl font-semibold tabular-nums">
-                  {stats ? formatPercent(ramPct, tag) : <Skeleton className="inline-block h-7 w-16" />}
+                  {stats ? (
+                    formatPercent(ramPct, tag)
+                  ) : (
+                    <Skeleton className="inline-block h-7 w-16" />
+                  )}
                 </p>
                 {stats && (
                   <p className="mt-0.5 font-mono text-[10px] text-muted-foreground tabular-nums">
@@ -339,10 +345,7 @@ export function HomePage({ onNavigate }: Props) {
                 todos.map((todo) => (
                   <div key={todo.id} className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm">{todo.title}</p>
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 text-[10px] capitalize"
-                    >
+                    <Badge variant="outline" className="shrink-0 text-[10px] capitalize">
                       {todo.priority}
                     </Badge>
                   </div>

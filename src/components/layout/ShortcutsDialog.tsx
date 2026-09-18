@@ -25,9 +25,7 @@ function Row({ keys, label }: { keys: string; label: string }) {
 }
 
 function displayHotkey(accel: string): string {
-  return accel
-    .replace(/CommandOrControl/g, "Ctrl")
-    .replace(/\+/g, "+");
+  return accel.replace(/CommandOrControl/g, "Ctrl").replace(/\+/g, "+");
 }
 
 export function ShortcutsDialog({ open, onOpenChange }: Props) {
@@ -45,18 +43,9 @@ export function ShortcutsDialog({ open, onOpenChange }: Props) {
           <Row keys="Ctrl+K" label={t.shortcutPalette} />
           <Row keys="Ctrl+," label={t.shortcutSettings} />
           <Row keys="?" label={t.shortcutShortcuts} />
-          <Row
-            keys={displayHotkey(settings.hotkeyToggleWindow)}
-            label={t.shortcutToggleWindow}
-          />
-          <Row
-            keys={displayHotkey(settings.hotkeyClipboard)}
-            label={t.shortcutClipboard}
-          />
-          <Row
-            keys={displayHotkey(settings.hotkeyScratchpad)}
-            label={t.hotkeyScratchpadLabel}
-          />
+          <Row keys={displayHotkey(settings.hotkeyToggleWindow)} label={t.shortcutToggleWindow} />
+          <Row keys={displayHotkey(settings.hotkeyClipboard)} label={t.shortcutClipboard} />
+          <Row keys={displayHotkey(settings.hotkeyScratchpad)} label={t.hotkeyScratchpadLabel} />
           {SHORTCUT_ROUTES.map((route, i) => (
             <Row
               key={route}

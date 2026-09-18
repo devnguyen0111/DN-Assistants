@@ -1,10 +1,7 @@
 import { useEffect } from "react";
 import { useSettings } from "@/lib/settings-context";
-import {
-  syncGlobalHotkeys,
-  unregisterAllGlobalHotkeys,
-} from "@/lib/global-hotkeys";
-import type { AppRoute } from "@/lib/routing";
+import { syncGlobalHotkeys, unregisterAllGlobalHotkeys } from "@/lib/global-hotkeys";
+import { parseWidgetKind, type AppRoute } from "@/lib/routing";
 
 type Options = {
   onNavigate?: (route: AppRoute) => void;
@@ -19,16 +16,12 @@ export function useDesktopHotkeys(options: Options = {}) {
 
   useEffect(() => {
     if (!ready) return;
+    if (parseWidgetKind()) return;
     void syncGlobalHotkeys(settings);
     return () => {
       void unregisterAllGlobalHotkeys();
     };
-  }, [
-    ready,
-    settings.hotkeyToggleWindow,
-    settings.hotkeyClipboard,
-    settings.hotkeyScratchpad,
-  ]);
+  }, [ready, settings.hotkeyToggleWindow, settings.hotkeyClipboard, settings.hotkeyScratchpad]);
 
   useEffect(() => {
     const onClipboard = () => onNavigate?.("clipboard");

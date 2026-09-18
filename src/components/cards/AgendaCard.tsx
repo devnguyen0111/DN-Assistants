@@ -52,7 +52,11 @@ export function AgendaCard({ refreshKey = 0, onEditEvent }: Props) {
             <ErrorState
               title={t.errorTitle}
               description={error}
-              action={<button type="button" className="text-sm underline" onClick={load}>{t.retry}</button>}
+              action={
+                <button type="button" className="text-sm underline" onClick={load}>
+                  {t.retry}
+                </button>
+              }
             />
           )}
           {!loading && !error && events.length === 0 && <EmptyState title={t.noEvents} />}

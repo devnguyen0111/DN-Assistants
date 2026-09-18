@@ -20,13 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { localeTag, useI18n } from "@/lib/i18n";
-import {
-  createNote,
-  deleteNote,
-  searchNotes,
-  updateNote,
-  type Note,
-} from "@/lib/notes";
+import { createNote, deleteNote, searchNotes, updateNote, type Note } from "@/lib/notes";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "edit" | "preview" | "split";
@@ -185,11 +179,15 @@ export function NotesCard() {
                       </p>
                       {note.tags ? (
                         <div className="mt-1 flex flex-wrap gap-1">
-                          {note.tags.split(",").map((x) => x.trim()).filter(Boolean).map((tg) => (
-                            <Badge key={tg} variant="secondary" className="text-[10px]">
-                              {tg}
-                            </Badge>
-                          ))}
+                          {note.tags
+                            .split(",")
+                            .map((x) => x.trim())
+                            .filter(Boolean)
+                            .map((tg) => (
+                              <Badge key={tg} variant="secondary" className="text-[10px]">
+                                {tg}
+                              </Badge>
+                            ))}
                         </div>
                       ) : null}
                       <p className="mt-1 font-mono text-[10px] text-muted-foreground">

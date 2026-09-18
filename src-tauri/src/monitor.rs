@@ -100,10 +100,12 @@ impl Monitor {
 
         let networks = Networks::new_with_refreshed_list();
         let disks = Disks::new_with_refreshed_list();
-        let nvml = nvml_wrapper::Nvml::init().ok();
+        let nvml = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            nvml_wrapper::Nvml::init().ok()
+        }))
+        .ok()
+        .flatten();
 
-        // Prime CPU counters so the first real sample is meaningful.
-        std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
         sys.refresh_cpu_usage();
 
         Self {

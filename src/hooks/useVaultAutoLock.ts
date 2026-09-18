@@ -25,12 +25,9 @@ export function useVaultAutoLock() {
     const arm = () => {
       clear();
       if (!isVaultUnlocked()) return;
-      timerRef.current = window.setTimeout(
-        () => {
-          if (isVaultUnlocked()) lockVault();
-        },
-        minutes * 60_000,
-      );
+      timerRef.current = window.setTimeout(() => {
+        if (isVaultUnlocked()) lockVault();
+      }, minutes * 60_000);
     };
 
     const onActivity = () => {

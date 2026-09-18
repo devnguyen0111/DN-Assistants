@@ -111,9 +111,7 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
   const favorites = settings.favoriteRoutes;
 
   const toggleFavorite = (r: AppRoute) => {
-    const next = favorites.includes(r)
-      ? favorites.filter((x) => x !== r)
-      : [...favorites, r];
+    const next = favorites.includes(r) ? favorites.filter((x) => x !== r) : [...favorites, r];
     void updateSettings({ favoriteRoutes: next });
   };
 
@@ -123,7 +121,10 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
     const label = navLabel(t, item.route);
     const isFav = favorites.includes(item.route);
     const btn = (
-      <div key={item.route} className={cn("group relative flex", collapsed ? "justify-center" : "")}>
+      <div
+        key={item.route}
+        className={cn("group relative flex", collapsed ? "justify-center" : "")}
+      >
         <Button
           variant={active ? "secondary" : "ghost"}
           className={cn(
@@ -173,7 +174,9 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
           collapsed ? "w-[72px] items-center px-2" : "w-52 items-stretch px-3",
         )}
       >
-        <div className={cn("mb-3 flex items-center gap-2", collapsed ? "justify-center px-0" : "px-2")}>
+        <div
+          className={cn("mb-3 flex items-center gap-2", collapsed ? "justify-center px-0" : "px-2")}
+        >
           <img src={logoUrl} alt="" className="size-9 shrink-0 rounded-lg" />
           {!collapsed && (
             <div className="min-w-0">
@@ -192,9 +195,7 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
                 </p>
               )}
               {collapsed && <Separator className="my-1" />}
-              {favorites.map((r) =>
-                renderItem({ route: r, icon: ROUTE_ICON[r] }, false),
-              )}
+              {favorites.map((r) => renderItem({ route: r, icon: ROUTE_ICON[r] }, false))}
             </div>
           )}
           {NAV_GROUPS.map((group) => (

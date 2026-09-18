@@ -2,7 +2,7 @@
 
 Desktop utility app built with **Tauri 2**, **React 19**, **shadcn/ui**, **Lucide**, and **Anime.js**.
 
-**Version 0.2.0**
+**Version 0.2.1**
 
 ## Features
 

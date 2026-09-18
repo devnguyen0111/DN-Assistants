@@ -36,11 +36,7 @@ import { createNote, searchNotes, type Note } from "@/lib/notes";
 import { localeTag, useI18n } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
 import { useSettings } from "@/lib/settings-context";
-import {
-  getCachedEntries,
-  isVaultUnlocked,
-  searchVaultEntries,
-} from "@/lib/vault";
+import { getCachedEntries, isVaultUnlocked, searchVaultEntries } from "@/lib/vault";
 import { toast } from "sonner";
 
 type Props = {
@@ -168,11 +164,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
     const q = query.trim().toLowerCase();
     if (!q || looksLikeMath(q)) return events.slice(0, 6);
     return events
-      .filter(
-        (e) =>
-          e.title.toLowerCase().includes(q) ||
-          (e.note ?? "").toLowerCase().includes(q),
-      )
+      .filter((e) => e.title.toLowerCase().includes(q) || (e.note ?? "").toLowerCase().includes(q))
       .slice(0, 8);
   }, [events, query]);
 
@@ -186,11 +178,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} title={t.commandPalette}>
-      <CommandInput
-        placeholder={t.commandPlaceholder}
-        value={query}
-        onValueChange={setQuery}
-      />
+      <CommandInput placeholder={t.commandPlaceholder} value={query} onValueChange={setQuery} />
       <CommandList>
         <CommandEmpty>{t.noCommandResults}</CommandEmpty>
 

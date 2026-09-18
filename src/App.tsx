@@ -5,6 +5,7 @@ import { CommandPalette } from "@/components/layout/CommandPalette";
 import { OnboardingDialog } from "@/components/layout/OnboardingDialog";
 import { ShortcutsDialog } from "@/components/layout/ShortcutsDialog";
 import { WhatsNewDialog } from "@/components/layout/WhatsNewDialog";
+import { UpdateDialog } from "@/components/layout/UpdateDialog";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEventReminders } from "@/hooks/useEventReminders";
@@ -14,7 +15,7 @@ import { useTikTokStreakReminders } from "@/hooks/useTikTokStreakReminders";
 import { useVaultAutoLock } from "@/hooks/useVaultAutoLock";
 import { useMorningBrief } from "@/hooks/useMorningBrief";
 import { useHashRoute } from "@/hooks/useHashRoute";
-import { I18nProvider, useI18n } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/i18n";
 import { parseWidgetKind } from "@/lib/routing";
 import { SettingsProvider, useSettings } from "@/lib/settings-context";
 import { ThemeProvider } from "@/lib/theme";
@@ -48,7 +49,6 @@ function AppRoutes() {
   useTikTokStreakReminders();
   useVaultAutoLock();
   useMorningBrief();
-  const { t } = useI18n();
 
   const onNavigate = useCallback(
     (r: typeof route) => {
@@ -68,21 +68,21 @@ function AppRoutes() {
   useDesktopHotkeys({ onNavigate });
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || widgetKind) return;
     if (settings.lastRoute && settings.lastRoute !== route && !window.location.hash) {
       setRoute(settings.lastRoute);
     }
   }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!ready || widgetKind || !settings.autoCheckUpdates) return;
     const timer = window.setTimeout(() => {
       void promptUpdateIfAvailable({
-        updateAvailable: t.updateAvailable,
-        installUpdate: t.installUpdate,
+        skippedVersion: settings.skippedUpdateVersion,
       });
     }, 2500);
     return () => window.clearTimeout(timer);
-  }, [t.installUpdate, t.updateAvailable]);
+  }, [ready, settings.autoCheckUpdates, settings.skippedUpdateVersion, widgetKind]);
 
   if (widgetKind) {
     return (
@@ -112,14 +112,11 @@ function AppRoutes() {
       {route === "weather" && <WeatherPage />}
       {route === "settings" && <SettingsPage />}
       {route === "about" && <AboutPage onNavigate={onNavigate} />}
-      <CommandPalette
-        open={paletteOpen}
-        onOpenChange={setPaletteOpen}
-        onNavigate={onNavigate}
-      />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onNavigate={onNavigate} />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <OnboardingDialog onNavigate={onNavigate} />
       <WhatsNewDialog />
+      <UpdateDialog />
       <Toaster richColors position="bottom-right" />
     </AppShell>
   );

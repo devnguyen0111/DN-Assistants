@@ -31,19 +31,12 @@ export function randomBytes(length: number): Uint8Array {
 }
 
 async function importPasswordKey(password: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveKey"],
-  );
+  return crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, [
+    "deriveKey",
+  ]);
 }
 
-export async function deriveVaultKey(
-  password: string,
-  saltB64: string,
-): Promise<CryptoKey> {
+export async function deriveVaultKey(password: string, saltB64: string): Promise<CryptoKey> {
   const baseKey = await importPasswordKey(password);
   const salt = asBufferSource(base64ToBytes(saltB64));
   return crypto.subtle.deriveKey(

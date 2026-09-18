@@ -94,12 +94,7 @@ function ClipboardThumb({ path }: { path: string }) {
     );
   }
   return (
-    <img
-      src={src}
-      alt=""
-      className="h-16 w-24 rounded-md border object-cover"
-      loading="lazy"
-    />
+    <img src={src} alt="" className="h-16 w-24 rounded-md border object-cover" loading="lazy" />
   );
 }
 
@@ -139,21 +134,18 @@ export function ClipboardCard() {
     void (async () => {
       try {
         const { listen } = await import("@tauri-apps/api/event");
-        unlisten = await listen<ClipboardChangedPayload | string>(
-          "clipboard-changed",
-          (event) => {
-            const payload = event.payload;
-            if (typeof payload === "string") {
-              void upsertClipboardItem(payload);
-              return;
-            }
-            if (payload.kind === "image") {
-              void upsertClipboardImage(payload);
-            } else {
-              void upsertClipboardItem(payload.content);
-            }
-          },
-        );
+        unlisten = await listen<ClipboardChangedPayload | string>("clipboard-changed", (event) => {
+          const payload = event.payload;
+          if (typeof payload === "string") {
+            void upsertClipboardItem(payload);
+            return;
+          }
+          if (payload.kind === "image") {
+            void upsertClipboardImage(payload);
+          } else {
+            void upsertClipboardItem(payload.content);
+          }
+        });
       } catch {
         // Tauri event API unavailable (browser preview)
       }
@@ -379,9 +371,7 @@ export function ClipboardCard() {
                           <div>
                             <p className="text-sm font-medium">{t.clipboardImageLabel}</p>
                             <p className="font-mono text-[10px] text-muted-foreground">
-                              {item.width && item.height
-                                ? `${item.width}×${item.height}`
-                                : "PNG"}
+                              {item.width && item.height ? `${item.width}×${item.height}` : "PNG"}
                             </p>
                           </div>
                         </div>

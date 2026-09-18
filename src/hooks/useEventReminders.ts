@@ -1,10 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import {
-  listEvents,
-  startOfDay,
-  type CalendarEvent,
-} from "@/lib/events";
+import { listEvents, startOfDay, type CalendarEvent } from "@/lib/events";
 import { useI18n } from "@/lib/i18n";
 import {
   hasFired,
@@ -79,8 +75,7 @@ export function useEventReminders() {
         const key = `${event.id}:${minuteKey(remindMs)}`;
         markFired(key, now);
 
-        const timeLabel =
-          event.all_day === 1 ? t.allDay : formatTimeHm(event.start_at);
+        const timeLabel = event.all_day === 1 ? t.allDay : formatTimeHm(event.start_at);
         const body = `${timeLabel} — ${event.title}`;
         toast(t.eventReminder, { description: body });
         playReminderChime();

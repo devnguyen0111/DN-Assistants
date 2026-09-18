@@ -10,19 +10,10 @@ type Options = {
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
-  return (
-    tag === "INPUT" ||
-    tag === "TEXTAREA" ||
-    tag === "SELECT" ||
-    target.isContentEditable
-  );
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
 }
 
-export function useGlobalShortcuts({
-  onNavigate,
-  onTogglePalette,
-  onOpenShortcuts,
-}: Options) {
+export function useGlobalShortcuts({ onNavigate, onTogglePalette, onOpenShortcuts }: Options) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const typing = isTypingTarget(event.target);

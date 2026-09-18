@@ -34,11 +34,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { useSettings } from "@/lib/settings-context";
 import { generateTotp } from "@/lib/totp";
-import {
-  checkHibp,
-  findReusedPasswords,
-  passwordStrength,
-} from "@/lib/vault-health";
+import { checkHibp, findReusedPasswords, passwordStrength } from "@/lib/vault-health";
 import { parseGooglePasswordCsv } from "@/lib/vault-csv";
 import {
   createVaultEntry,
@@ -96,9 +92,7 @@ export function PasswordsCard() {
   const [genUpper, setGenUpper] = useState(true);
   const [genDigits, setGenDigits] = useState(true);
   const [genSymbols, setGenSymbols] = useState(true);
-  const [totpLive, setTotpLive] = useState<{ code: string; remaining: number } | null>(
-    null,
-  );
+  const [totpLive, setTotpLive] = useState<{ code: string; remaining: number } | null>(null);
   const [hibpBusy, setHibpBusy] = useState(false);
   const [hibpResult, setHibpResult] = useState<number | null>(null);
 
@@ -129,10 +123,7 @@ export function PasswordsCard() {
     return () => window.removeEventListener("dn-vault-changed", onChanged);
   }, []);
 
-  const filtered = useMemo(
-    () => searchVaultEntries(query, entries),
-    [entries, query],
-  );
+  const filtered = useMemo(() => searchVaultEntries(query, entries), [entries, query]);
 
   const selected = useMemo(
     () => entries.find((e) => e.id === selectedId) ?? null,
@@ -144,8 +135,7 @@ export function PasswordsCard() {
     [entries],
   );
 
-  const activeTotpSecret =
-    (selected?.totpSecret || form.totpSecret || "").trim() || "";
+  const activeTotpSecret = (selected?.totpSecret || form.totpSecret || "").trim() || "";
 
   useEffect(() => {
     if (!unlocked || !activeTotpSecret) {
@@ -326,9 +316,7 @@ export function PasswordsCard() {
       if (!path || typeof path !== "string") return;
       const raw = await readTextFile(path);
       const rows = parseGooglePasswordCsv(raw);
-      const existing = new Set(
-        entries.map((e) => entryDedupKey(e.url, e.username)),
-      );
+      const existing = new Set(entries.map((e) => entryDedupKey(e.url, e.username)));
       let imported = 0;
       let skipped = 0;
       for (const row of rows) {
@@ -444,13 +432,31 @@ export function PasswordsCard() {
               {t.vaultTitle}
             </CardTitle>
             <div className="flex gap-1">
-              <Button size="icon" variant="ghost" className="size-8" title={t.vaultImport} onClick={() => void onImportCsv()}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8"
+                title={t.vaultImport}
+                onClick={() => void onImportCsv()}
+              >
                 <Upload className="size-4" />
               </Button>
-              <Button size="icon" variant="ghost" className="size-8" title={t.vaultAdd} onClick={startNew}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8"
+                title={t.vaultAdd}
+                onClick={startNew}
+              >
                 <Plus className="size-4" />
               </Button>
-              <Button size="icon" variant="ghost" className="size-8" title={t.vaultLock} onClick={onLock}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8"
+                title={t.vaultLock}
+                onClick={onLock}
+              >
                 <Lock className="size-4" />
               </Button>
             </div>
@@ -513,15 +519,9 @@ export function PasswordsCard() {
 
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">
-              {selectedId ? t.vaultEdit : t.vaultAdd}
-            </CardTitle>
+            <CardTitle className="text-base">{selectedId ? t.vaultEdit : t.vaultAdd}</CardTitle>
             {selectedId && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setConfirmDelete(true)}
-              >
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
                 <Trash2 className="size-4" />
                 {t.delete}
               </Button>
@@ -548,9 +548,7 @@ export function PasswordsCard() {
                 <div className="flex gap-1">
                   <Input
                     value={form.username}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, username: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
                   />
                   <Button
                     size="icon"
@@ -568,9 +566,7 @@ export function PasswordsCard() {
                   <Input
                     type={showPassword ? "text" : "password"}
                     value={form.password}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, password: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   />
                   <Button
                     size="icon"
@@ -594,9 +590,7 @@ export function PasswordsCard() {
                 <Label>{t.vaultTotpSecret}</Label>
                 <Input
                   value={form.totpSecret}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, totpSecret: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, totpSecret: e.target.value }))}
                   placeholder={t.vaultTotpHint}
                   autoComplete="off"
                   spellCheck={false}
@@ -715,7 +709,10 @@ export function PasswordsCard() {
                   0-9
                 </label>
                 <label className="flex items-center gap-1.5">
-                  <Checkbox checked={genSymbols} onCheckedChange={(v) => setGenSymbols(v === true)} />
+                  <Checkbox
+                    checked={genSymbols}
+                    onCheckedChange={(v) => setGenSymbols(v === true)}
+                  />
                   !@#
                 </label>
               </div>

@@ -37,10 +37,7 @@ function applyStats(
   setError(null);
   setHistory((prev) => ({
     cpu: push(prev.cpu, next.global_cpu_usage),
-    ram: push(
-      prev.ram,
-      next.memory.total > 0 ? (next.memory.used / next.memory.total) * 100 : 0,
-    ),
+    ram: push(prev.ram, next.memory.total > 0 ? (next.memory.used / next.memory.total) * 100 : 0),
     rx: push(prev.rx, next.network.rx_bytes_per_sec),
     tx: push(prev.tx, next.network.tx_bytes_per_sec),
     gpu: push(prev.gpu, next.gpu.utilization ?? 0),
