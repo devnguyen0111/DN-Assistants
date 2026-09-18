@@ -93,20 +93,18 @@ pub fn start_clipboard_watcher(app: AppHandle) {
                                 });
 
                             if let Some(png) = encoded {
-                                if png.len() <= MAX_IMAGE_BYTES {
-                                    if fs::write(&path, &png).is_ok() {
-                                        last_image_hash = Some(hash.clone());
-                                        let _ = app.emit(
-                                            "clipboard-changed",
-                                            ClipboardPayload::Image {
-                                                id,
-                                                path: path.to_string_lossy().into_owned(),
-                                                hash,
-                                                width,
-                                                height,
-                                            },
-                                        );
-                                    }
+                                if png.len() <= MAX_IMAGE_BYTES && fs::write(&path, &png).is_ok() {
+                                    last_image_hash = Some(hash.clone());
+                                    let _ = app.emit(
+                                        "clipboard-changed",
+                                        ClipboardPayload::Image {
+                                            id,
+                                            path: path.to_string_lossy().into_owned(),
+                                            hash,
+                                            width,
+                                            height,
+                                        },
+                                    );
                                 }
                             }
                         }
