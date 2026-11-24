@@ -1,11 +1,12 @@
-import { APP_VERSION, loadSettingsSync, type AppSettings } from "@/lib/settings";
+import { APP_VERSION, exportableSettings, loadSettingsSync } from "@/lib/settings";
 
 export async function exportDiagnostics(): Promise<void> {
   const { save } = await import("@tauri-apps/plugin-dialog");
   const { writeTextFile } = await import("@tauri-apps/plugin-fs");
   const settings = loadSettingsSync();
-  const safeSettings: Partial<AppSettings> = { ...settings };
-  delete (safeSettings as { scratchpad?: string }).scratchpad;
+  const safeSettings = exportableSettings(settings);
+  delete safeSettings.scratchpad;
+  safeSettings.clipboardTemplates = [];
   // never include vault secrets or clipboard content
   let version = APP_VERSION;
   let os: Record<string, string> | null = null;

@@ -1,6 +1,8 @@
-import Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb, newId } from "@/lib/db";
+import { localDateKey } from "@/lib/utils";
 
-export type HabitCategory = "health" | "productivity" | "learning" | "fitness" | "mindset" | "general";
+export type HabitCategory =
+  "health" | "productivity" | "learning" | "fitness" | "mindset" | "general";
 export type HabitColor = "teal" | "blue" | "violet" | "rose" | "amber" | "emerald";
 
 export type Habit = {
@@ -9,6 +11,10 @@ export type Habit = {
   category: HabitCategory;
   color: HabitColor;
   target_days_per_week: number;
+  /** "HH:MM" daily reminder if not yet done, or "" for none. */
+  remind_at: string;
+  /** "HH:MM" late "streak at risk" nudge, or "" for none. */
+  nudge_at: string;
   created_at: string;
 };
 
@@ -29,42 +35,42 @@ export type HabitStats = {
   last30Days: Record<string, boolean>;
 };
 
-const DB_URL = "sqlite:dn-assistant.db";
-let dbPromise: Promise<Database> | null = null;
+/** @deprecated alias kept for callers; use `localDateKey` from utils. */
+export const formatDateKey = (d: Date): string => localDateKey(d);
 
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
+/** Accepts "H:MM"/"HH:MM" and returns normalized "HH:MM", or "" when empty/invalid. */
+export function normalizeHm(value: string | null | undefined): string {
+  const m = (value ?? "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return "";
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return "";
+  return `${String(h).padStart(2, "0")}:${m[2]}`;
 }
 
-function notifyChanged() {
-  window.dispatchEvent(new Event("dn-habits-changed"));
-}
-
-function newId() {
-  return crypto.randomUUID();
-}
-
-export function formatDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+function normalizeHabit(row: Habit): Habit {
+  return { ...row, remind_at: normalizeHm(row.remind_at), nudge_at: normalizeHm(row.nudge_at) };
 }
 
 export async function listHabits(): Promise<Habit[]> {
   const db = await getDb();
-  return db.select<Habit[]>("SELECT * FROM habits ORDER BY created_at ASC");
+  const rows = await db.select<Habit[]>("SELECT * FROM habits ORDER BY created_at ASC");
+  return rows.map(normalizeHabit);
 }
 
-export async function createHabit(input: {
+type HabitFields = {
   title: string;
-  category?: HabitCategory;
-  color?: HabitColor;
-  target_days_per_week?: number;
-}): Promise<Habit> {
+  category: HabitCategory;
+  color: HabitColor;
+  target_days_per_week: number;
+  remind_at: string;
+  nudge_at: string;
+};
+
+export async function createHabit(
+  input: Pick<HabitFields, "title"> & Partial<Omit<HabitFields, "title">>,
+  createdAt = new Date().toISOString(),
+): Promise<Habit> {
   const db = await getDb();
   const habit: Habit = {
     id: newId(),
@@ -72,34 +78,30 @@ export async function createHabit(input: {
     category: input.category ?? "general",
     color: input.color ?? "teal",
     target_days_per_week: Math.min(7, Math.max(1, input.target_days_per_week ?? 7)),
-    created_at: new Date().toISOString(),
+    remind_at: normalizeHm(input.remind_at),
+    nudge_at: normalizeHm(input.nudge_at),
+    created_at: createdAt,
   };
 
   await db.execute(
-    `INSERT INTO habits (id, title, category, color, target_days_per_week, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
+    `INSERT INTO habits (id, title, category, color, target_days_per_week, remind_at, nudge_at, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       habit.id,
       habit.title,
       habit.category,
       habit.color,
       habit.target_days_per_week,
+      habit.remind_at,
+      habit.nudge_at,
       habit.created_at,
     ],
   );
-  notifyChanged();
+  emitChange("habits");
   return habit;
 }
 
-export async function updateHabit(
-  id: string,
-  input: Partial<{
-    title: string;
-    category: HabitCategory;
-    color: HabitColor;
-    target_days_per_week: number;
-  }>,
-): Promise<void> {
+export async function updateHabit(id: string, input: Partial<HabitFields>): Promise<void> {
   const db = await getDb();
   const existing = await db.select<Habit[]>("SELECT * FROM habits WHERE id = $1", [id]);
   if (!existing[0]) return;
@@ -111,19 +113,23 @@ export async function updateHabit(
     input.target_days_per_week !== undefined
       ? Math.min(7, Math.max(1, input.target_days_per_week))
       : existing[0].target_days_per_week;
+  const remindAt =
+    input.remind_at !== undefined ? normalizeHm(input.remind_at) : existing[0].remind_at;
+  const nudgeAt = input.nudge_at !== undefined ? normalizeHm(input.nudge_at) : existing[0].nudge_at;
 
   await db.execute(
-    `UPDATE habits SET title = $1, category = $2, color = $3, target_days_per_week = $4 WHERE id = $5`,
-    [title, category, color, targetDays, id],
+    `UPDATE habits SET title = $1, category = $2, color = $3, target_days_per_week = $4,
+       remind_at = $5, nudge_at = $6 WHERE id = $7`,
+    [title, category, color, targetDays, remindAt, nudgeAt, id],
   );
-  notifyChanged();
+  emitChange("habits");
 }
 
 export async function deleteHabit(id: string): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM habit_logs WHERE habit_id = $1", [id]);
   await db.execute("DELETE FROM habits WHERE id = $1", [id]);
-  notifyChanged();
+  emitChange("habits");
 }
 
 export async function getHabitLogs(habitId?: string): Promise<HabitLog[]> {
@@ -149,7 +155,7 @@ export async function toggleHabitDate(habitId: string, dateStr: string): Promise
       habitId,
       dateStr,
     ]);
-    notifyChanged();
+    emitChange("habits");
     return false;
   } else {
     const log: HabitLog = {
@@ -164,7 +170,7 @@ export async function toggleHabitDate(habitId: string, dateStr: string): Promise
        VALUES ($1, $2, $3, $4, $5)`,
       [log.id, log.habit_id, log.date, log.completed, log.created_at],
     );
-    notifyChanged();
+    emitChange("habits");
     return true;
   }
 }
@@ -178,7 +184,7 @@ export function computeHabitStats(habit: Habit, logs: HabitLog[]): HabitStats {
   // Calculate current streak
   let currentStreak = 0;
   const cursor = new Date(today);
-  
+
   // If not completed today, check from yesterday
   if (!completedToday) {
     cursor.setDate(cursor.getDate() - 1);
@@ -268,23 +274,27 @@ export async function getAllHabitsWithStats(): Promise<HabitStats[]> {
 export async function upsertHabit(habit: Habit): Promise<void> {
   const db = await getDb();
   await db.execute(
-    `INSERT INTO habits (id, title, category, color, target_days_per_week, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO habits (id, title, category, color, target_days_per_week, remind_at, nudge_at, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT(id) DO UPDATE SET
        title = excluded.title,
        category = excluded.category,
        color = excluded.color,
-       target_days_per_week = excluded.target_days_per_week`,
+       target_days_per_week = excluded.target_days_per_week,
+       remind_at = excluded.remind_at,
+       nudge_at = excluded.nudge_at`,
     [
       habit.id,
       habit.title,
       habit.category,
       habit.color,
       habit.target_days_per_week,
+      normalizeHm(habit.remind_at),
+      normalizeHm(habit.nudge_at),
       habit.created_at,
     ],
   );
-  notifyChanged();
+  emitChange("habits");
 }
 
 export async function upsertHabitLog(log: HabitLog): Promise<void> {
@@ -292,9 +302,9 @@ export async function upsertHabitLog(log: HabitLog): Promise<void> {
   await db.execute(
     `INSERT INTO habit_logs (id, habit_id, date, completed, created_at)
      VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT(id) DO UPDATE SET
-       completed = excluded.completed`,
+     ON CONFLICT(id) DO UPDATE SET completed = excluded.completed
+     ON CONFLICT(habit_id, date) DO UPDATE SET completed = excluded.completed`,
     [log.id, log.habit_id, log.date, log.completed, log.created_at],
   );
-  notifyChanged();
+  emitChange("habits");
 }

@@ -1,9 +1,10 @@
+import { PageLayout } from "@/components/layout/PageLayout";
 import { HabitsCard } from "@/components/cards/HabitsCard";
 
 export function HabitsPage() {
   return (
-    <div className="space-y-4">
+    <PageLayout route="habits">
       <HabitsCard />
-    </div>
+    </PageLayout>
   );
 }

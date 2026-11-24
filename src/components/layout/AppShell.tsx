@@ -1,36 +1,9 @@
 import type { ReactNode } from "react";
-import {
-  Calculator,
-  CalendarDays,
-  CheckSquare,
-  ClipboardList,
-  Clock3,
-  CloudSun,
-  Code2,
-  Coins,
-  Home,
-  Info,
-  Monitor,
-  Network,
-  NotebookPen,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Pin,
-  Settings,
-  Star,
-  Timer,
-  Flame,
-  KeyRound,
-  CheckCircle2,
-  FileCode2,
-  Palette,
-  Wrench,
-} from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Star } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useI18n } from "@/lib/i18n";
+import { NAV_GROUPS, ROUTE_ICON, UNFAVORITABLE_ROUTES, type NavItem } from "@/lib/nav";
 import { navLabel } from "@/lib/page-meta";
 import { useSettings } from "@/lib/settings-context";
 import type { AppRoute } from "@/lib/routing";
@@ -43,209 +16,185 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-type NavItem = {
-  route: AppRoute;
-  icon: typeof Clock3;
-};
-
-type NavGroup = {
-  labelKey: "navGroupMain" | "navGroupTools" | "navGroupSystem" | "navGroupFavorites";
-  items: NavItem[];
-};
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    labelKey: "navGroupMain",
-    items: [
-      { route: "home", icon: Home },
-      { route: "clock", icon: Clock3 },
-      { route: "calendar", icon: CalendarDays },
-    ],
-  },
-  {
-    labelKey: "navGroupTools",
-    items: [
-      { route: "calculator", icon: Calculator },
-      { route: "currency", icon: Coins },
-      { route: "devtools", icon: Code2 },
-      { route: "habits", icon: CheckCircle2 },
-      { route: "snippets", icon: FileCode2 },
-      { route: "colors", icon: Palette },
-      { route: "filetools", icon: Wrench },
-      { route: "notes", icon: NotebookPen },
-      { route: "todo", icon: CheckSquare },
-      { route: "clipboard", icon: ClipboardList },
-      { route: "passwords", icon: KeyRound },
-      { route: "focus", icon: Timer },
-      { route: "tiktok", icon: Flame },
-    ],
-  },
-  {
-    labelKey: "navGroupSystem",
-    items: [
-      { route: "system", icon: Monitor },
-      { route: "network", icon: Network },
-      { route: "weather", icon: CloudSun },
-      { route: "settings", icon: Settings },
-      { route: "about", icon: Info },
-    ],
-  },
-];
-
-const ROUTE_ICON: Record<AppRoute, typeof Home> = {
-  home: Home,
-  clock: Clock3,
-  calendar: CalendarDays,
-  calculator: Calculator,
-  currency: Coins,
-  devtools: Code2,
-  habits: CheckCircle2,
-  snippets: FileCode2,
-  colors: Palette,
-  filetools: Wrench,
-  notes: NotebookPen,
-  todo: CheckSquare,
-  clipboard: ClipboardList,
-  passwords: KeyRound,
-  focus: Timer,
-  tiktok: Flame,
-  system: Monitor,
-  network: Network,
-  weather: CloudSun,
-  settings: Settings,
-  about: Info,
-};
-
+/**
+ * Viewport grid: sidebar (brand · scrolling nav · fixed footer) + toolbar + scrolling page.
+ * Spec §3 — the footer (Settings, About, Collapse) never overlaps or scrolls away.
+ */
 export function AppShell({ route, onNavigate, children }: AppShellProps) {
   const { t } = useI18n();
   const { settings, updateSettings } = useSettings();
   const collapsed = settings.sidebarCollapsed;
-  const favorites = settings.favoriteRoutes;
+  const hidden = new Set(settings.hiddenRoutes);
+  const favorites = settings.favoriteRoutes.filter(
+    (r) => !hidden.has(r) && !UNFAVORITABLE_ROUTES.includes(r),
+  );
+  const favoriteSet = new Set(favorites);
 
   const toggleFavorite = (r: AppRoute) => {
-    const next = favorites.includes(r) ? favorites.filter((x) => x !== r) : [...favorites, r];
+    const next = settings.favoriteRoutes.includes(r)
+      ? settings.favoriteRoutes.filter((x) => x !== r)
+      : [...settings.favoriteRoutes, r];
     void updateSettings({ favoriteRoutes: next });
   };
 
-  const renderItem = (item: NavItem, showPin = true) => {
+  const renderItem = (item: NavItem, opts: { star?: boolean } = {}) => {
     const Icon = item.icon;
     const active = route === item.route;
     const label = navLabel(t, item.route);
-    const isFav = favorites.includes(item.route);
-    const btn = (
-      <div
-        key={item.route}
-        className={cn("group relative flex", collapsed ? "justify-center" : "")}
+    const isFav = favoriteSet.has(item.route);
+    const showStar =
+      !collapsed && opts.star !== false && !UNFAVORITABLE_ROUTES.includes(item.route);
+
+    const link = (
+      <button
+        type="button"
+        onClick={() => onNavigate(item.route)}
+        aria-current={active ? "page" : undefined}
+        aria-label={collapsed ? label : undefined}
+        className={cn(
+          "relative flex h-[var(--density-nav-h)] w-full items-center gap-2 rounded-sm px-2 text-body transition-colors duration-100",
+          "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+          collapsed && "justify-center px-0",
+          showStar && "pr-9",
+          active
+            ? "bg-accent font-medium text-accent-foreground before:absolute before:left-0 before:top-1/2 before:h-[18px] before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-primary"
+            : "text-text-2 hover:bg-surface-3 hover:text-text-1",
+        )}
       >
-        <Button
-          variant={active ? "secondary" : "ghost"}
-          className={cn(
-            "h-10 gap-2",
-            collapsed ? "w-11 justify-center px-0" : "w-full justify-start pr-8",
-            active && "border-l-2 border-l-primary bg-primary/15 text-foreground",
-          )}
-          onClick={() => onNavigate(item.route)}
-          title={label}
-          aria-current={active ? "page" : undefined}
-        >
-          <Icon className="size-4 shrink-0" />
-          {!collapsed && <span className="truncate">{label}</span>}
-        </Button>
-        {!collapsed && showPin && item.route !== "home" && (
+        <Icon className="size-4 shrink-0" />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </button>
+    );
+
+    return (
+      <li key={item.route} className="group/nav relative">
+        {collapsed ? (
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger asChild>{link}</TooltipTrigger>
+            <TooltipContent side="right">{label}</TooltipContent>
+          </Tooltip>
+        ) : (
+          link
+        )}
+        {showStar && (
           <button
             type="button"
-            className={cn(
-              "absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100",
-              isFav && "opacity-100 text-primary",
-            )}
+            aria-pressed={isFav}
+            aria-label={`${isFav ? t.unpinFavorite : t.pinFavorite}: ${label}`}
             title={isFav ? t.unpinFavorite : t.pinFavorite}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(item.route);
-            }}
+            onClick={() => toggleFavorite(item.route)}
+            className={cn(
+              "absolute right-1 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-sm text-text-3 transition-opacity hover:bg-surface-3 hover:text-text-1",
+              "focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring",
+              isFav
+                ? "text-accent-foreground opacity-100"
+                : "opacity-0 group-hover/nav:opacity-100 group-focus-within/nav:opacity-100",
+            )}
           >
-            {isFav ? <Star className="size-3.5 fill-current" /> : <Pin className="size-3.5" />}
+            <Star className={cn("size-3.5", isFav && "fill-current")} />
           </button>
         )}
-      </div>
-    );
-    if (!collapsed) return btn;
-    return (
-      <Tooltip key={item.route} delayDuration={200}>
-        <TooltipTrigger asChild>{btn}</TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
-      </Tooltip>
+      </li>
     );
   };
 
+  const groupLabel = (text: string) =>
+    collapsed ? (
+      <div role="separator" className="mx-2 my-2 h-px bg-border" />
+    ) : (
+      <p className="px-2 pb-1 pt-3 text-caption font-semibold text-text-3">{text}</p>
+    );
+
+  const mainGroups = NAV_GROUPS.filter((g) => g.labelKey !== "navGroupApp");
+  const appGroup = NAV_GROUPS.find((g) => g.labelKey === "navGroupApp");
+
   return (
-    <div className="flex min-h-screen">
-      <aside
-        className={cn(
-          "sticky top-0 flex h-screen shrink-0 flex-col border-r bg-card/60 py-4 backdrop-blur transition-[width] duration-200",
-          collapsed ? "w-[72px] items-center px-2" : "w-52 items-stretch px-3",
-        )}
+    <div
+      className="grid h-full overflow-hidden"
+      style={{
+        gridTemplateColumns: `${collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-expanded)"} minmax(0, 1fr)`,
+      }}
+    >
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[90] focus:rounded-sm focus:bg-elevated focus:px-3 focus:py-2 focus:shadow-popover"
       >
-        <div
-          className={cn("mb-3 flex items-center gap-2", collapsed ? "justify-center px-0" : "px-2")}
-        >
-          <img src={logoUrl} alt="" className="size-9 shrink-0 rounded-lg" />
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold tracking-tight">{t.appName}</p>
-              <p className="truncate text-[11px] text-muted-foreground">{t.appTagline}</p>
-            </div>
-          )}
+        {t.skipToMain}
+      </a>
+
+      <aside className="grid min-h-0 grid-rows-[64px_minmax(0,1fr)_auto] border-r bg-sidebar px-2">
+        <div className={cn("flex items-center gap-2", collapsed ? "justify-center" : "px-2")}>
+          <img src={logoUrl} alt="" className="size-8 shrink-0 rounded-md" />
+          {!collapsed && <span className="truncate text-label text-text-1">{t.appName}</span>}
         </div>
 
-        <nav className="flex flex-1 flex-col gap-3 overflow-y-auto">
+        <nav
+          aria-label={t.navMain}
+          className="min-h-0 overflow-y-auto overscroll-contain pb-2 [scrollbar-gutter:stable]"
+        >
           {favorites.length > 0 && (
-            <div className="flex flex-col gap-1">
-              {!collapsed && (
-                <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t.navGroupFavorites}
-                </p>
-              )}
-              {collapsed && <Separator className="my-1" />}
-              {favorites.map((r) => renderItem({ route: r, icon: ROUTE_ICON[r] }, false))}
+            <div>
+              {groupLabel(t.navGroupFavorites)}
+              <ul className="space-y-0.5">
+                {favorites.map((r) => renderItem({ route: r, icon: ROUTE_ICON[r] }))}
+              </ul>
             </div>
           )}
-          {NAV_GROUPS.map((group) => (
-            <div key={group.labelKey} className="flex flex-col gap-1">
-              {!collapsed && (
-                <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t[group.labelKey]}
-                </p>
-              )}
-              {collapsed && <Separator className="my-1" />}
-              {group.items.map((item) => renderItem(item))}
-            </div>
-          ))}
+          {mainGroups.map((group) => {
+            // Hidden modules stay reachable via Ctrl+K; the current page is always shown.
+            const items = group.items.filter(
+              (i) => (!hidden.has(i.route) || i.route === route) && !favoriteSet.has(i.route),
+            );
+            if (items.length === 0) return null;
+            return (
+              <div key={group.labelKey}>
+                {groupLabel(t[group.labelKey])}
+                <ul className="space-y-0.5">{items.map((item) => renderItem(item))}</ul>
+              </div>
+            );
+          })}
         </nav>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn("mt-2", collapsed ? "w-11 px-0" : "w-full justify-start")}
-          onClick={() => void updateSettings({ sidebarCollapsed: !collapsed })}
-          title={collapsed ? t.expandSidebar : t.collapseSidebar}
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="size-4" />
-          ) : (
-            <>
-              <PanelLeftClose className="size-4" />
-              <span>{t.collapseSidebar}</span>
-            </>
+        <div className="shrink-0 border-t bg-sidebar py-2">
+          {!collapsed && appGroup && (
+            <p className="px-2 pb-1 text-caption font-semibold text-text-3">
+              {t[appGroup.labelKey]}
+            </p>
           )}
-        </Button>
+          <ul className="space-y-0.5">
+            {appGroup?.items.map((item) => renderItem(item, { star: false }))}
+            <li>
+              <button
+                type="button"
+                onClick={() => void updateSettings({ sidebarCollapsed: !collapsed })}
+                aria-label={collapsed ? t.expandSidebar : t.collapseSidebar}
+                aria-expanded={!collapsed}
+                className={cn(
+                  "flex h-[var(--density-nav-h)] w-full items-center gap-2 rounded-sm px-2 text-body text-text-2 hover:bg-surface-3 hover:text-text-1 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+                  collapsed && "justify-center px-0",
+                )}
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="size-4" />
+                ) : (
+                  <PanelLeftClose className="size-4" />
+                )}
+                {!collapsed && <span>{t.collapseSidebar}</span>}
+              </button>
+            </li>
+          </ul>
+        </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 lg:px-8">
-          <AppHeader route={route} onNavigate={onNavigate} />
-          <main className="min-h-0">{children}</main>
-        </div>
+      <div className="grid min-h-0 min-w-0 grid-rows-[var(--app-toolbar-h)_minmax(0,1fr)]">
+        <AppHeader onNavigate={onNavigate} />
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="min-h-0 min-w-0 overflow-y-auto px-4 outline-none [@media(min-width:1200px)]:px-6"
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

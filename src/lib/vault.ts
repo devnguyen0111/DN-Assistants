@@ -1,4 +1,4 @@
-import Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb, newId } from "@/lib/db";
 import {
   createVaultMeta,
   decryptString,
@@ -38,20 +38,11 @@ export type VaultMeta = {
   iterations: number;
 };
 
-const DB_URL = "sqlite:dn-assistant.db";
 const META_STORE = "vault-meta.json";
 const META_KEY = "meta";
 
-let dbPromise: Promise<Database> | null = null;
 let vaultKey: CryptoKey | null = null;
 let cache: VaultEntry[] | null = null;
-
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
-}
 
 type StoreLike = {
   get: <T>(key: string) => Promise<T | undefined>;
@@ -66,14 +57,6 @@ async function getMetaStore(): Promise<StoreLike | null> {
   } catch {
     return null;
   }
-}
-
-function notifyChanged() {
-  window.dispatchEvent(new Event("dn-vault-changed"));
-}
-
-function newId() {
-  return crypto.randomUUID();
 }
 
 export function isVaultUnlocked(): boolean {
@@ -123,7 +106,7 @@ export async function setupVault(password: string): Promise<void> {
   vaultKey = await verifyMasterPassword(password, meta);
   if (!vaultKey) throw new Error("Failed to initialize vault");
   cache = [];
-  notifyChanged();
+  emitChange("vault");
 }
 
 export async function unlockVault(password: string): Promise<boolean> {
@@ -133,14 +116,14 @@ export async function unlockVault(password: string): Promise<boolean> {
   if (!key) return false;
   vaultKey = key;
   await reloadCache();
-  notifyChanged();
+  emitChange("vault");
   return true;
 }
 
 export function lockVault(): void {
   vaultKey = null;
   cache = null;
-  notifyChanged();
+  emitChange("vault");
 }
 
 async function requireKey(): Promise<CryptoKey> {
@@ -225,7 +208,7 @@ export async function createVaultEntry(input: VaultEntryPayload): Promise<VaultE
     [entry.id, nonce, ciphertext, entry.created_at, entry.updated_at],
   );
   cache = [entry, ...(cache ?? [])];
-  notifyChanged();
+  emitChange("vault");
   return entry;
 }
 
@@ -249,7 +232,7 @@ export async function updateVaultEntry(id: string, input: VaultEntryPayload): Pr
   if (cache) {
     cache = cache.map((e) => (e.id === id ? { ...e, ...payload, updated_at: now } : e));
   }
-  notifyChanged();
+  emitChange("vault");
 }
 
 export async function deleteVaultEntry(id: string): Promise<void> {
@@ -257,7 +240,7 @@ export async function deleteVaultEntry(id: string): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM vault_entries WHERE id = $1", [id]);
   if (cache) cache = cache.filter((e) => e.id !== id);
-  notifyChanged();
+  emitChange("vault");
 }
 
 export function makePassword(opts?: Partial<PasswordGeneratorOptions>): string {

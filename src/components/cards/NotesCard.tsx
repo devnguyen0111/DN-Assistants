@@ -10,7 +10,6 @@ import {
   Italic,
   List,
   Minus,
-  NotebookPen,
   Pin,
   Plus,
   Quote,
@@ -26,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, LoadingState } from "@/components/ui/state-block";
 import {
@@ -33,19 +33,13 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { localeTag, useI18n } from "@/lib/i18n";
-import {
-  createNote,
-  deleteNote,
-  listNotes,
-  searchNotes,
-  updateNote,
-  type Note,
-} from "@/lib/notes";
+import { createNote, deleteNote, listNotes, searchNotes, updateNote, type Note } from "@/lib/notes";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "edit" | "preview" | "split";
@@ -60,7 +54,7 @@ export function NotesCard() {
   const [tags, setTags] = useState("");
   const [pinned, setPinned] = useState(false);
   const [query, setQuery] = useState("");
-  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [viewMode, setViewMode] = useState<ViewMode>("edit");
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -94,6 +88,13 @@ export function NotesCard() {
     [notes, selectedId],
   );
 
+  const [pendingSwitch, setPendingSwitch] = useState<(() => void) | null>(null);
+  /** Run `action` now, or ask Save / Discard / Cancel when the editor has unsaved changes. */
+  const guard = (action: () => void) => {
+    if (isDirtyRef.current) setPendingSwitch(() => action);
+    else action();
+  };
+
   const selectNote = (note: Note) => {
     setSelectedId(note.id);
     setTitle(note.title);
@@ -110,6 +111,7 @@ export function NotesCard() {
     setPinned(false);
   };
 
+  const isDirtyRef = useRef(false);
   const isDirty = useMemo(() => {
     if (!selected) {
       return Boolean(title.trim() || body.trim() || tags.trim());
@@ -121,6 +123,7 @@ export function NotesCard() {
       pinned !== (selected.pinned === 1)
     );
   }, [selected, title, body, tags, pinned]);
+  isDirtyRef.current = isDirty;
 
   const wordsCount = useMemo(() => {
     const trimmed = body.trim();
@@ -219,15 +222,12 @@ export function NotesCard() {
 
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+      <div className="grid items-start gap-4 @[880px]:grid-cols-[280px_minmax(0,1fr)]">
         {/* Notes list */}
         <Card className="h-full">
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2">
-              <NotebookPen className="size-4 text-primary" />
-              {t.notesTitle}
-            </CardTitle>
-            <Button size="sm" variant="outline" onClick={startNew}>
+            <h2 className="sr-only">{t.notesTitle}</h2>
+            <Button size="sm" variant="outline" onClick={() => guard(startNew)}>
               <Plus className="size-4" />
               {t.newNote}
             </Button>
@@ -242,32 +242,31 @@ export function NotesCard() {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <ScrollArea className="h-[420px] pr-2">
+            <ScrollArea className="h-[240px] pr-2 @[880px]:h-[calc(100dvh-300px)] @[880px]:min-h-[320px]">
               {loading ? (
                 <LoadingState />
               ) : notes.length === 0 ? (
                 <EmptyState title={t.notesEmpty} />
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-0.5">
                   {notes.map((note) => (
                     <button
                       key={note.id}
                       type="button"
                       className={cn(
-                        "block w-full rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent",
-                        note.id === selectedId ? "border-primary bg-accent" : "border-border/60",
+                        "relative block w-full rounded-sm px-3 py-2 text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-ring",
+                        note.id === selectedId &&
+                          "bg-accent before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary",
                       )}
-                      onClick={() => selectNote(note)}
+                      onClick={() => guard(() => selectNote(note))}
                     >
                       <div className="flex items-center gap-1.5">
                         {note.pinned === 1 && <Pin className="size-3 shrink-0 text-primary" />}
-                        <p className="truncate text-sm font-medium">
+                        <p className="truncate text-body font-medium text-text-1">
                           {note.title || t.noteTitlePlaceholder}
                         </p>
                       </div>
-                      <p className="line-clamp-1 text-xs text-muted-foreground">
-                        {note.body || "—"}
-                      </p>
+                      <p className="line-clamp-2 text-caption text-text-3">{note.body || "—"}</p>
                       {note.tags ? (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {note.tags
@@ -281,9 +280,9 @@ export function NotesCard() {
                             ))}
                         </div>
                       ) : null}
-                      <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                      <p className="mt-1 text-caption text-text-3">
                         {new Intl.DateTimeFormat(tag, {
-                          dateStyle: "short",
+                          dateStyle: "medium",
                           timeStyle: "short",
                         }).format(new Date(note.updated_at))}
                       </p>
@@ -299,32 +298,29 @@ export function NotesCard() {
         <Card className="h-full">
           <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
             <div className="flex items-center gap-2">
-              <CardTitle>{selected ? t.notesTitle : t.newNote}</CardTitle>
-              <Badge
-                variant={isDirty ? "outline" : "secondary"}
-                className={isDirty ? "text-amber-600 border-amber-500/40 text-[10px]" : "text-[10px]"}
-              >
+              <CardTitle className="max-w-[24rem] truncate">
+                {title.trim() || (selected ? t.noteTitlePlaceholder : t.newNote)}
+              </CardTitle>
+              <Badge variant={isDirty ? "warning" : "secondary"}>
                 {isDirty ? t.unsavedStatus : t.savedStatus}
               </Badge>
-              <span className="font-mono text-[11px] text-muted-foreground">
+              <span className="text-caption text-text-3">
                 {wordsCount} {t.wordsCount} · {charsCount} {t.charsCount}
               </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5">
-              <div className="flex rounded-lg border p-0.5">
-                {(["edit", "preview", "split"] as ViewMode[]).map((m) => (
-                  <Button
-                    key={m}
-                    size="sm"
-                    variant={viewMode === m ? "secondary" : "ghost"}
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setViewMode(m)}
-                  >
-                    {m === "edit" ? t.notesEdit : m === "preview" ? t.notesPreview : t.notesSplit}
-                  </Button>
-                ))}
-              </div>
+              <SegmentedControl
+                size="sm"
+                label={t.notesViewMode}
+                value={viewMode}
+                onValueChange={setViewMode}
+                options={[
+                  { value: "edit", label: t.notesEdit },
+                  { value: "preview", label: t.notesPreview },
+                  { value: "split", label: t.notesSplit },
+                ]}
+              />
 
               <Button
                 size="sm"
@@ -493,10 +489,14 @@ export function NotesCard() {
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={15}
-                className="resize-none font-mono text-sm"
+                className="min-h-[320px] resize-y font-mono text-code @[880px]:h-[calc(100dvh-360px)]"
               />
             )}
-            {viewMode === "preview" && <ScrollArea className="h-[360px]">{preview}</ScrollArea>}
+            {viewMode === "preview" && (
+              <ScrollArea className="h-[calc(100dvh-360px)] min-h-[320px] rounded-sm border bg-surface-2 p-3">
+                <div className="max-w-[72ch]">{preview}</div>
+              </ScrollArea>
+            )}
             {viewMode === "split" && (
               <div className="grid gap-3 md:grid-cols-2">
                 <Textarea
@@ -505,14 +505,47 @@ export function NotesCard() {
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={15}
-                  className="resize-none font-mono text-sm"
+                  className="min-h-[320px] resize-y font-mono text-code @[880px]:h-[calc(100dvh-360px)]"
                 />
-                <ScrollArea className="h-[360px]">{preview}</ScrollArea>
+                <ScrollArea className="h-[calc(100dvh-360px)] min-h-[320px] rounded-sm border bg-surface-2 p-3">
+                  <div className="max-w-[72ch]">{preview}</div>
+                </ScrollArea>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={pendingSwitch !== null} onOpenChange={(o) => !o && setPendingSwitch(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.notesUnsavedTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{t.notesUnsavedDesc}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel autoFocus>{t.cancel}</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const next = pendingSwitch;
+                setPendingSwitch(null);
+                next?.();
+              }}
+            >
+              {t.notesDiscard}
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                const next = pendingSwitch;
+                setPendingSwitch(null);
+                void save().then(() => next?.());
+              }}
+            >
+              {t.save}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

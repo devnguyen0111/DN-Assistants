@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { listUpcoming } from "@/lib/events";
 import { showOsNotification } from "@/lib/notify";
 import { listTodos } from "@/lib/todos";
+import { localDateKey } from "@/lib/utils";
 import { useSettings } from "@/lib/settings-context";
 
 const LS_KEY = "dn-morning-brief-day";
@@ -15,13 +16,15 @@ export function useMorningBrief() {
     if (!ready || !settings.morningBriefEnabled || ran.current) return;
     const hour = new Date().getHours();
     if (hour < 5 || hour > 11) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateKey();
     if (localStorage.getItem(LS_KEY) === today) return;
     ran.current = true;
     void (async () => {
       try {
         const [events, todos] = await Promise.all([listUpcoming(5), listTodos()]);
-        const due = todos.filter((t) => !t.done && t.due_at && t.due_at.slice(0, 10) <= today);
+        const due = todos.filter(
+          (t) => !t.done && t.due_at && localDateKey(new Date(t.due_at)) <= today,
+        );
         const lines = [
           ...events.map((e) => `• ${e.title}`),
           ...due.slice(0, 5).map((t) => `☐ ${t.title}`),

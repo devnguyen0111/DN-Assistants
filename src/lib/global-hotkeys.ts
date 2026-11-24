@@ -23,6 +23,22 @@ async function showMainWindow() {
   await win.setFocus();
 }
 
+async function isMainWindowVisible(): Promise<boolean> {
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  const win = getCurrentWindow();
+  return (await win.isVisible()) && !(await win.isMinimized());
+}
+
+/** Hide the main window again (used when a launcher session ends without navigating). */
+export async function hideMainWindow(): Promise<void> {
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().hide();
+  } catch {
+    // ignore
+  }
+}
+
 export async function unregisterAllGlobalHotkeys(): Promise<void> {
   try {
     const { unregisterAll } = await import("@tauri-apps/plugin-global-shortcut");
@@ -42,8 +58,10 @@ export async function syncGlobalHotkeys(settings: AppSettings): Promise<void> {
     const toggle = settings.hotkeyToggleWindow.trim();
     const clipboard = settings.hotkeyClipboard.trim();
     const scratchpad = settings.hotkeyScratchpad.trim();
+    const launcher = settings.hotkeyLauncher.trim();
 
-    const unique = new Map<string, "toggle" | "clipboard" | "scratchpad">();
+    const unique = new Map<string, "toggle" | "clipboard" | "scratchpad" | "launcher">();
+    if (launcher) unique.set(launcher, "launcher");
     if (toggle) unique.set(toggle, "toggle");
     if (clipboard) unique.set(clipboard, "clipboard");
     if (scratchpad) unique.set(scratchpad, "scratchpad");
@@ -55,6 +73,14 @@ export async function syncGlobalHotkeys(settings: AppSettings): Promise<void> {
           void (async () => {
             if (action === "toggle") {
               await toggleMainWindow();
+              return;
+            }
+            if (action === "launcher") {
+              const wasVisible = await isMainWindowVisible();
+              await showMainWindow();
+              window.dispatchEvent(
+                new CustomEvent("dn-hotkey-launcher", { detail: { wasVisible } }),
+              );
               return;
             }
             await showMainWindow();

@@ -1,10 +1,18 @@
+mod backup_cmds;
 mod clipboard_watch;
+mod file_ops;
 mod monitor;
 mod network_cmds;
+mod power;
+mod secure_clipboard;
 
+use backup_cmds::write_auto_backup;
 use clipboard_watch::{is_clipboard_watching, set_clipboard_watching, start_clipboard_watcher};
+use file_ops::rename_files;
 use monitor::{get_system_stats, kill_process, set_metrics_paused, start_metrics_emitter, Monitor};
 use network_cmds::{check_port, dns_lookup, get_public_ip, ping_host};
+use power::{cancel_power_action, get_power_schedule, schedule_power_action};
+use secure_clipboard::copy_sensitive;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{
@@ -184,6 +192,18 @@ pub fn run() {
         CREATE INDEX IF NOT EXISTS idx_snippets_category ON snippets(category);",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 10,
+            description: "habit_reminders_and_todo_reminders",
+            sql: "ALTER TABLE habits ADD COLUMN remind_at TEXT NOT NULL DEFAULT '';
+        ALTER TABLE habits ADD COLUMN nudge_at TEXT NOT NULL DEFAULT '';
+        ALTER TABLE todos ADD COLUMN remind_minutes INTEGER;
+        DELETE FROM habit_logs WHERE rowid NOT IN (
+            SELECT MIN(rowid) FROM habit_logs GROUP BY habit_id, date
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_habit_logs_habit_date ON habit_logs(habit_id, date);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let mut builder = tauri::Builder::default();
@@ -222,6 +242,12 @@ pub fn run() {
             set_clipboard_watching,
             is_clipboard_watching,
             set_metrics_paused,
+            copy_sensitive,
+            write_auto_backup,
+            schedule_power_action,
+            cancel_power_action,
+            get_power_schedule,
+            rename_files,
         ])
         .setup(|app| {
             start_metrics_emitter(app.handle().clone());

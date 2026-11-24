@@ -60,12 +60,28 @@ pub fn start_clipboard_watcher(app: AppHandle) {
     std::thread::spawn(move || {
         let mut last_text: Option<String> = None;
         let mut last_image_hash: Option<String> = None;
+        #[cfg(windows)]
+        let mut last_seq: u32 = 0;
 
         loop {
             std::thread::sleep(POLL_INTERVAL);
 
             if !CLIPBOARD_WATCHING.load(Ordering::Relaxed) {
                 continue;
+            }
+
+            // Windows: only read (and hash) the clipboard when it actually changed, and
+            // respect content that its owner flagged as "do not record" (password managers).
+            #[cfg(windows)]
+            {
+                let seq = crate::secure_clipboard::win::sequence_number();
+                if seq == last_seq {
+                    continue;
+                }
+                last_seq = seq;
+                if crate::secure_clipboard::win::content_is_excluded() {
+                    continue;
+                }
             }
 
             // Prefer image when present (Snipping Tool / copy image).
@@ -115,6 +131,9 @@ pub fn start_clipboard_watcher(app: AppHandle) {
             if let Ok(text) = app.clipboard().read_text() {
                 if !text.trim().is_empty() && last_text.as_deref() != Some(text.as_str()) {
                     last_text = Some(text.clone());
+                    if crate::secure_clipboard::is_sensitive(&text) {
+                        continue;
+                    }
                     let _ = app.emit(
                         "clipboard-changed",
                         ClipboardPayload::Text { content: text },

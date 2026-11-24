@@ -1,9 +1,10 @@
+import { PageLayout } from "@/components/layout/PageLayout";
 import { FileToolsCard } from "@/components/cards/FileToolsCard";
 
 export function FileToolsPage() {
   return (
-    <div className="space-y-4">
+    <PageLayout route="filetools">
       <FileToolsCard />
-    </div>
+    </PageLayout>
   );
 }

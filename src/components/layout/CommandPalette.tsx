@@ -1,27 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Calculator,
   CalendarDays,
   CheckSquare,
-  ClipboardList,
-  Clock3,
-  CloudSun,
-  Code2,
   Coins,
   Copy,
-  Home,
-  Info,
-  Monitor,
-  Network,
   NotebookPen,
-  Settings,
-  Timer,
-  Flame,
   KeyRound,
-  CheckCircle2,
   FileCode2,
-  Palette,
-  Wrench,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -33,8 +18,11 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { evaluate, formatResult } from "@/lib/calculator";
+import { emitChange } from "@/lib/db";
+import { Kbd } from "@/components/ui/keyboard-hint";
+import { NAV_GROUPS } from "@/lib/nav";
+import { navLabel } from "@/lib/page-meta";
 import { convertCurrency, formatConverted, parseCurrencyQuery } from "@/lib/currency";
 import { listEvents, type CalendarEvent } from "@/lib/events";
 import { createNote, searchNotes, type Note } from "@/lib/notes";
@@ -45,61 +33,13 @@ import type { AppRoute } from "@/lib/routing";
 import { useSettings } from "@/lib/settings-context";
 import { getCachedEntries, isVaultUnlocked, searchVaultEntries } from "@/lib/vault";
 import { toast } from "sonner";
+import { copySecret } from "@/lib/secure-clipboard";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNavigate: (route: AppRoute) => void;
 };
-
-const NAV_ITEMS: Array<{
-  route: AppRoute;
-  icon: typeof Home;
-  labelKey:
-    | "navHome"
-    | "navClock"
-    | "navCalendar"
-    | "navCalculator"
-    | "navCurrency"
-    | "navDevTools"
-    | "navNotes"
-    | "navTodo"
-    | "navHabits"
-    | "navSnippets"
-    | "navColors"
-    | "navFileTools"
-    | "navClipboard"
-    | "navPasswords"
-    | "navFocus"
-    | "navTikTok"
-    | "navSystem"
-    | "navNetwork"
-    | "navWeather"
-    | "navSettings"
-    | "navAbout";
-}> = [
-  { route: "home", icon: Home, labelKey: "navHome" },
-  { route: "clock", icon: Clock3, labelKey: "navClock" },
-  { route: "calendar", icon: CalendarDays, labelKey: "navCalendar" },
-  { route: "calculator", icon: Calculator, labelKey: "navCalculator" },
-  { route: "currency", icon: Coins, labelKey: "navCurrency" },
-  { route: "devtools", icon: Code2, labelKey: "navDevTools" },
-  { route: "habits", icon: CheckCircle2, labelKey: "navHabits" },
-  { route: "snippets", icon: FileCode2, labelKey: "navSnippets" },
-  { route: "colors", icon: Palette, labelKey: "navColors" },
-  { route: "filetools", icon: Wrench, labelKey: "navFileTools" },
-  { route: "notes", icon: NotebookPen, labelKey: "navNotes" },
-  { route: "todo", icon: CheckSquare, labelKey: "navTodo" },
-  { route: "clipboard", icon: ClipboardList, labelKey: "navClipboard" },
-  { route: "passwords", icon: KeyRound, labelKey: "navPasswords" },
-  { route: "focus", icon: Timer, labelKey: "navFocus" },
-  { route: "tiktok", icon: Flame, labelKey: "navTikTok" },
-  { route: "system", icon: Monitor, labelKey: "navSystem" },
-  { route: "network", icon: Network, labelKey: "navNetwork" },
-  { route: "weather", icon: CloudSun, labelKey: "navWeather" },
-  { route: "settings", icon: Settings, labelKey: "navSettings" },
-  { route: "about", icon: Info, labelKey: "navAbout" },
-];
 
 function looksLikeMath(query: string): boolean {
   const q = query.trim();
@@ -220,7 +160,24 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
   }, [query, vaultUnlocked, open]);
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} title={t.commandPalette}>
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t.commandPalette}
+      footer={
+        <div className="flex h-8 items-center gap-4 border-t bg-surface-2 px-3 text-caption text-text-3">
+          <span className="flex items-center gap-1">
+            <Kbd>↑↓</Kbd> {t.paletteHintMove}
+          </span>
+          <span className="flex items-center gap-1">
+            <Kbd>Enter</Kbd> {t.paletteHintRun}
+          </span>
+          <span className="flex items-center gap-1">
+            <Kbd>Esc</Kbd> {t.paletteHintClose}
+          </span>
+        </div>
+      }
+    >
       <CommandInput placeholder={t.commandPlaceholder} value={query} onValueChange={setQuery} />
       <CommandList>
         <CommandEmpty>{t.noCommandResults}</CommandEmpty>
@@ -267,7 +224,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
                 try {
                   await createTodo({ title: todoQuery, priority: "medium" });
                   toast.success(`${t.saved}: ${todoQuery}`);
-                  window.dispatchEvent(new Event("dn-todos-changed"));
+                  emitChange("todos");
                   onOpenChange(false);
                 } catch (err) {
                   toast.error(err instanceof Error ? err.message : String(err));
@@ -292,7 +249,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
                   try {
                     await toggleTodo(todo.id, true);
                     toast.success(`${t.todoCompleted}: ${todo.title}`);
-                    window.dispatchEvent(new Event("dn-todos-changed"));
+                    emitChange("todos");
                     setTodos((prev) => prev.filter((item) => item.id !== todo.id));
                   } catch (err) {
                     toast.error(err instanceof Error ? err.message : String(err));
@@ -333,37 +290,41 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
               {t.vaultEmpty}
             </CommandItem>
           ) : (
-            vaultMatches.map((entry) => (
+            vaultMatches.flatMap((entry) => [
               <CommandItem
-                key={entry.id}
-                value={`vault-${entry.id}-${entry.title}-${entry.username}-${entry.url}`}
+                key={`${entry.id}-pw`}
+                value={`vault-pw-${entry.id}-${entry.title}-${entry.username}-${entry.url}`}
                 onSelect={() => {
-                  void navigator.clipboard.writeText(entry.password);
+                  void copySecret(entry.password);
                   toast.success(`${t.copied}: ${t.vaultFieldPassword}`);
                   onOpenChange(false);
                 }}
               >
                 <KeyRound className="size-4" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{entry.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {entry.username || entry.url}
+                  <p className="truncate text-body">
+                    {t.paletteCopyPassword.replace("{name}", entry.title)}
                   </p>
+                  <p className="truncate text-caption text-text-3">{entry.username || entry.url}</p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void navigator.clipboard.writeText(entry.username);
+              </CommandItem>,
+              entry.username ? (
+                <CommandItem
+                  key={`${entry.id}-user`}
+                  value={`vault-user-${entry.id}-${entry.title}-${entry.username}`}
+                  onSelect={() => {
+                    void copySecret(entry.username);
                     toast.success(`${t.copied}: ${t.vaultFieldUsername}`);
+                    onOpenChange(false);
                   }}
                 >
-                  {t.vaultCopyUsername}
-                </Button>
-              </CommandItem>
-            ))
+                  <KeyRound className="size-4 opacity-0" aria-hidden />
+                  <p className="truncate text-body">
+                    {t.paletteCopyUsername.replace("{name}", entry.title)}
+                  </p>
+                </CommandItem>
+              ) : null,
+            ])
           )}
         </CommandGroup>
 
@@ -407,19 +368,20 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: Props) {
         </CommandGroup>
 
         <CommandGroup heading={t.commandNavigate}>
-          {NAV_ITEMS.map((item) => {
+          {NAV_GROUPS.flatMap((g) => g.items).map((item) => {
             const Icon = item.icon;
+            const label = navLabel(t, item.route);
             return (
               <CommandItem
                 key={item.route}
-                value={`${t[item.labelKey]} ${item.route}`}
+                value={`${label} ${item.route}`}
                 onSelect={() => {
                   onNavigate(item.route);
                   onOpenChange(false);
                 }}
               >
                 <Icon className="size-4" />
-                {t[item.labelKey]}
+                {label}
               </CommandItem>
             );
           })}

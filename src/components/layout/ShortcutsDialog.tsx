@@ -46,6 +46,7 @@ export function ShortcutsDialog({ open, onOpenChange }: Props) {
           <Row keys={displayHotkey(settings.hotkeyToggleWindow)} label={t.shortcutToggleWindow} />
           <Row keys={displayHotkey(settings.hotkeyClipboard)} label={t.shortcutClipboard} />
           <Row keys={displayHotkey(settings.hotkeyScratchpad)} label={t.hotkeyScratchpadLabel} />
+          <Row keys={displayHotkey(settings.hotkeyLauncher)} label={t.hotkeyLauncherLabel} />
           {SHORTCUT_ROUTES.map((route, i) => (
             <Row
               key={route}

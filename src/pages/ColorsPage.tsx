@@ -1,9 +1,10 @@
+import { PageLayout } from "@/components/layout/PageLayout";
 import { ColorStudioCard } from "@/components/cards/ColorStudioCard";
 
 export function ColorsPage() {
   return (
-    <div className="space-y-4">
+    <PageLayout route="colors">
       <ColorStudioCard />
-    </div>
+    </PageLayout>
   );
 }

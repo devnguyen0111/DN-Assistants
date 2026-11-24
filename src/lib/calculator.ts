@@ -183,7 +183,7 @@ function evalRpn(tokens: Token[]): number {
       let res: number;
       switch (token.value) {
         case "sin":
-          // degrees or radians? In standard desktop calculators, sin is commonly in degrees or radians. Let's do degrees if user expects standard or radians. In JS Math.sin is radians. Let's convert degrees to radians: (arg * Math.PI) / 180
+          // Trig functions take degrees (like the default DEG mode of desktop calculators).
           res = Math.sin((arg * Math.PI) / 180);
           break;
         case "cos":

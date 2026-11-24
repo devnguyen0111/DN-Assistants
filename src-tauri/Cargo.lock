@@ -1113,7 +1113,7 @@ dependencies = [
 
 [[package]]
 name = "dn-assistant"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "image",
  "nvml-wrapper",
@@ -1141,6 +1141,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
  "uuid",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

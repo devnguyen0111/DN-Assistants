@@ -1,18 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  Check,
-  CheckCircle2,
-  Flame,
-  MoreVertical,
-  Plus,
-  Star,
-  Trash2,
-  Trophy,
-} from "lucide-react";
+import { Check, CheckCircle2, Flame, MoreVertical, Plus, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useI18n } from "@/lib/i18n";
+import { localeTag, useI18n } from "@/lib/i18n";
 import {
   createHabit,
   deleteHabit,
@@ -102,7 +93,7 @@ const CATEGORIES: HabitCategory[] = [
 const COLORS: HabitColor[] = ["teal", "blue", "violet", "rose", "amber", "emerald"];
 
 export function HabitsCard() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [items, setItems] = useState<HabitStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -113,6 +104,8 @@ export function HabitsCard() {
   const [category, setCategory] = useState<HabitCategory>("general");
   const [color, setColor] = useState<HabitColor>("teal");
   const [targetDays, setTargetDays] = useState(7);
+  const [remindAt, setRemindAt] = useState("");
+  const [nudgeAt, setNudgeAt] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
   const loadData = async () => {
@@ -139,6 +132,8 @@ export function HabitsCard() {
     setCategory("general");
     setColor("teal");
     setTargetDays(7);
+    setRemindAt("");
+    setNudgeAt("");
     setDialogOpen(true);
   };
 
@@ -148,6 +143,8 @@ export function HabitsCard() {
     setCategory(stat.habit.category);
     setColor(stat.habit.color);
     setTargetDays(stat.habit.target_days_per_week);
+    setRemindAt(stat.habit.remind_at);
+    setNudgeAt(stat.habit.nudge_at);
     setDialogOpen(true);
   };
 
@@ -165,6 +162,8 @@ export function HabitsCard() {
           category,
           color,
           target_days_per_week: targetDays,
+          remind_at: remindAt,
+          nudge_at: nudgeAt,
         });
         toast.success(t.saved);
       } else {
@@ -173,6 +172,8 @@ export function HabitsCard() {
           category,
           color,
           target_days_per_week: targetDays,
+          remind_at: remindAt,
+          nudge_at: nudgeAt,
         });
         toast.success(t.saved);
       }
@@ -233,61 +234,46 @@ export function HabitsCard() {
 
   const totalDoneToday = items.filter((x) => x.completedToday).length;
   const bestOverallStreak = items.reduce((max, x) => Math.max(max, x.bestStreak), 0);
+  const dateFmt = new Intl.DateTimeFormat(localeTag(locale), { dateStyle: "full" });
+  const fullDate = (key: string) => dateFmt.format(new Date(`${key}T00:00:00`));
 
   return (
     <div className="space-y-4">
-      {/* Summary KPI cards */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="bg-card/60 backdrop-blur">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CheckCircle2 className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t.completedToday}</p>
-              <p className="text-xl font-semibold tracking-tight">
-                {totalDoneToday} / {items.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/60 backdrop-blur">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
-              <Flame className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t.currentStreak}</p>
-              <p className="text-xl font-semibold tracking-tight">
-                {items.length > 0
-                  ? `${Math.max(...items.map((x) => x.currentStreak), 0)} days`
-                  : "0"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/60 backdrop-blur">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
-              <Trophy className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t.bestStreak}</p>
-              <p className="text-xl font-semibold tracking-tight">{bestOverallStreak} days</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {items.length > 0 && (
+        <dl className="flex flex-wrap gap-x-8 gap-y-2 rounded-lg border bg-surface-1 px-panel py-3">
+          <div>
+            <dt className="text-caption text-text-3">{t.completedToday}</dt>
+            <dd className="text-section tabular">
+              {totalDoneToday} / {items.length}
+            </dd>
+          </div>
+          {bestOverallStreak > 0 && (
+            <>
+              <div>
+                <dt className="text-caption text-text-3">{t.currentStreak}</dt>
+                <dd className="text-section tabular">
+                  {t.habitDays.replace(
+                    "{n}",
+                    String(Math.max(...items.map((x) => x.currentStreak), 0)),
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-caption text-text-3">{t.bestStreak}</dt>
+                <dd className="text-section tabular">
+                  {t.habitDays.replace("{n}", String(bestOverallStreak))}
+                </dd>
+              </div>
+            </>
+          )}
+        </dl>
+      )}
 
       {/* Main Habit list */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <CardTitle className="text-lg font-semibold tracking-tight">
-              {t.habitsTitle}
-            </CardTitle>
+            <h2 className="sr-only">{t.habitsTitle}</h2>
             <Badge variant="secondary" className="font-mono text-xs">
               {items.length}
             </Badge>
@@ -334,10 +320,7 @@ export function HabitsCard() {
               const dateEntries = Object.entries(item.last30Days);
 
               return (
-                <div
-                  key={item.habit.id}
-                  className="group rounded-xl border bg-card/40 p-3.5 transition-colors hover:bg-card/70"
-                >
+                <div key={item.habit.id} className="group border-b px-1 py-3 last:border-b-0">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <button
@@ -347,9 +330,11 @@ export function HabitsCard() {
                           "flex size-9 shrink-0 items-center justify-center rounded-xl border transition-all",
                           item.completedToday
                             ? cn(theme.fill, "border-transparent text-white shadow-sm scale-105")
-                            : "border-border bg-muted/20 text-muted-foreground hover:border-primary hover:text-primary",
+                            : "border-control bg-surface-1 text-text-3 hover:border-primary hover:text-accent-foreground",
                         )}
                         title={t.checkInToday}
+                        aria-label={`${t.checkInToday}: ${item.habit.title}`}
+                        aria-pressed={item.completedToday}
                       >
                         <Check className="size-4 stroke-[2.5]" />
                       </button>
@@ -361,7 +346,7 @@ export function HabitsCard() {
                           </p>
                           <Badge
                             variant="outline"
-                            className={cn("text-[10px] uppercase font-mono", theme.text, theme.border)}
+                            className={cn("text-caption", theme.text, theme.border)}
                           >
                             {categoryLabel(item.habit.category)}
                           </Badge>
@@ -375,11 +360,12 @@ export function HabitsCard() {
                           <span>·</span>
                           <span className="flex items-center gap-1 font-mono">
                             <Star className="size-3 text-muted-foreground" />
-                            Best: {item.bestStreak}
+                            {t.habitBest}: {item.bestStreak}
                           </span>
                           <span>·</span>
                           <span>
-                            Week: {item.completedThisWeek}/{item.habit.target_days_per_week}d
+                            {t.habitWeek}: {item.completedThisWeek}/
+                            {item.habit.target_days_per_week}
                           </span>
                         </div>
                       </div>
@@ -410,10 +396,13 @@ export function HabitsCard() {
 
                   {/* 30-day interactive heatmap */}
                   <div className="mt-3">
-                    <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                    <div className="mb-1 flex items-center justify-between text-caption text-text-3">
                       <span>{t.habitHeatmap30Days}</span>
-                      <span className="font-mono">
-                        {dateEntries.filter(([, v]) => v).length}/30 days
+                      <span className="tabular">
+                        {t.habitDaysOf30.replace(
+                          "{n}",
+                          String(dateEntries.filter(([, v]) => v).length),
+                        )}
                       </span>
                     </div>
 
@@ -424,14 +413,16 @@ export function HabitsCard() {
                             <button
                               type="button"
                               onClick={() => onTogglePast(item.habit.id, dateKey)}
+                              aria-pressed={done}
+                              aria-label={`${fullDate(dateKey)}: ${done ? t.habitDone : t.habitNotDone}`}
                               className={cn(
-                                "size-4 rounded-sm transition-all hover:ring-2 hover:ring-primary/40",
-                                done ? theme.fill : "bg-muted/40 hover:bg-muted/80",
+                                "size-5 rounded-xs transition-colors hover:ring-2 hover:ring-primary/40 focus-visible:outline-2 focus-visible:outline-ring",
+                                done ? theme.fill : "bg-surface-3 hover:bg-border-strong",
                               )}
                             />
                           </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs font-mono">
-                            {dateKey}: {done ? "✓ Done" : "○ Not done"}
+                          <TooltipContent side="top">
+                            {fullDate(dateKey)}: {done ? `✓ ${t.habitDone}` : `○ ${t.habitNotDone}`}
                           </TooltipContent>
                         </Tooltip>
                       ))}
@@ -464,10 +455,7 @@ export function HabitsCard() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>{t.habitCategory}</Label>
-                <Select
-                  value={category}
-                  onValueChange={(v) => setCategory(v as HabitCategory)}
-                >
+                <Select value={category} onValueChange={(v) => setCategory(v as HabitCategory)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -491,9 +479,7 @@ export function HabitsCard() {
                     {COLORS.map((c) => (
                       <SelectItem key={c} value={c}>
                         <div className="flex items-center gap-2">
-                          <span
-                            className={cn("size-2.5 rounded-full", COLOR_MAP[c].fill)}
-                          />
+                          <span className={cn("size-2.5 rounded-full", COLOR_MAP[c].fill)} />
                           <span className="capitalize">{c}</span>
                         </div>
                       </SelectItem>
@@ -506,9 +492,7 @@ export function HabitsCard() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <Label>{t.habitTargetDays}</Label>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {targetDays} / 7
-                </span>
+                <span className="font-mono text-xs text-muted-foreground">{targetDays} / 7</span>
               </div>
               <Slider
                 value={[targetDays]}
@@ -518,6 +502,28 @@ export function HabitsCard() {
                 step={1}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="habit-remind">{t.habitRemindAt}</Label>
+                <Input
+                  id="habit-remind"
+                  type="time"
+                  value={remindAt}
+                  onChange={(e) => setRemindAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="habit-nudge">{t.habitNudgeAt}</Label>
+                <Input
+                  id="habit-nudge"
+                  type="time"
+                  value={nudgeAt}
+                  onChange={(e) => setNudgeAt(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">{t.habitRemindHint}</p>
           </div>
 
           <DialogFooter>

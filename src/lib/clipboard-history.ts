@@ -1,4 +1,5 @@
-import Database from "@tauri-apps/plugin-sql";
+import type Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb, newId } from "@/lib/db";
 
 export type ClipboardKind = "text" | "image";
 
@@ -25,24 +26,7 @@ export type ClipboardChangedPayload =
       height: number;
     };
 
-const DB_URL = "sqlite:dn-assistant.db";
 const MAX_ITEMS = 200;
-let dbPromise: Promise<Database> | null = null;
-
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
-}
-
-function notifyChanged() {
-  window.dispatchEvent(new Event("dn-clipboard-changed"));
-}
-
-function newId() {
-  return crypto.randomUUID();
-}
 
 export async function hashContent(content: string): Promise<string> {
   const data = new TextEncoder().encode(content);
@@ -74,13 +58,13 @@ export async function listClipboardItems(limit = MAX_ITEMS): Promise<ClipboardIt
 export async function pinItem(id: string): Promise<void> {
   const db = await getDb();
   await db.execute("UPDATE clipboard_items SET pinned = 1 WHERE id = $1", [id]);
-  notifyChanged();
+  emitChange("clipboard");
 }
 
 export async function unpinItem(id: string): Promise<void> {
   const db = await getDb();
   await db.execute("UPDATE clipboard_items SET pinned = 0 WHERE id = $1", [id]);
-  notifyChanged();
+  emitChange("clipboard");
 }
 
 async function removeImageFile(path: string) {
@@ -102,7 +86,7 @@ export async function deleteItem(id: string): Promise<void> {
   if (item && item.kind === "image" && item.content) {
     await removeImageFile(item.content);
   }
-  notifyChanged();
+  emitChange("clipboard");
 }
 
 export async function clearClipboardHistory(keepPinned = true): Promise<void> {
@@ -120,7 +104,7 @@ export async function clearClipboardHistory(keepPinned = true): Promise<void> {
   await Promise.all(
     rows.map((row) => (row.content ? removeImageFile(row.content) : Promise.resolve())),
   );
-  notifyChanged();
+  emitChange("clipboard");
 }
 
 async function trimUnpinned(db: Database) {
@@ -165,7 +149,7 @@ export async function upsertClipboardItem(content: string): Promise<ClipboardIte
   if (existing.length > 0) {
     const item = existing[0];
     await db.execute("UPDATE clipboard_items SET created_at = $1 WHERE id = $2", [now, item.id]);
-    notifyChanged();
+    emitChange("clipboard");
     return normalizeItem({ ...item, created_at: now });
   }
 
@@ -197,7 +181,7 @@ export async function upsertClipboardItem(content: string): Promise<ClipboardIte
   );
 
   await trimUnpinned(db);
-  notifyChanged();
+  emitChange("clipboard");
   return item;
 }
 
@@ -224,7 +208,7 @@ export async function upsertClipboardImage(payload: {
     if (payload.path && payload.path !== item.content) {
       await removeImageFile(payload.path);
     }
-    notifyChanged();
+    emitChange("clipboard");
     return normalizeItem({ ...item, created_at: now });
   }
 
@@ -256,7 +240,7 @@ export async function upsertClipboardImage(payload: {
   );
 
   await trimUnpinned(db);
-  notifyChanged();
+  emitChange("clipboard");
   return item;
 }
 
@@ -281,4 +265,25 @@ export async function clipboardImageSrc(path: string): Promise<string> {
   } catch {
     return path;
   }
+}
+
+/** Pinned text items — the only clipboard data worth carrying in a backup. */
+export async function listPinnedTextItems(): Promise<ClipboardItem[]> {
+  const db = await getDb();
+  const rows = await db.select<ClipboardItem[]>(
+    "SELECT * FROM clipboard_items WHERE pinned = 1 AND kind = 'text' ORDER BY created_at DESC",
+  );
+  return rows.map(normalizeItem);
+}
+
+/** Insert or re-pin a text item by id (used by backup restore). */
+export async function upsertPinnedTextItem(item: ClipboardItem): Promise<void> {
+  if (item.kind !== "text") return;
+  const db = await getDb();
+  await db.execute(
+    `INSERT INTO clipboard_items (id, content, hash, pinned, created_at, kind)
+     VALUES ($1, $2, $3, 1, $4, 'text')
+     ON CONFLICT(id) DO UPDATE SET content = $2, hash = $3, pinned = 1`,
+    [item.id, item.content, item.hash, item.created_at],
+  );
 }

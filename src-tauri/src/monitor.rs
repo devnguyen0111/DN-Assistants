@@ -299,8 +299,11 @@ impl Monitor {
     }
 }
 
+// async so the (possibly contended) monitor lock is never awaited on the UI thread.
 #[tauri::command]
-pub fn get_system_stats(state: tauri::State<'_, Mutex<Monitor>>) -> Result<SystemStats, String> {
+pub async fn get_system_stats(
+    state: tauri::State<'_, Mutex<Monitor>>,
+) -> Result<SystemStats, String> {
     let mut monitor = state.lock().map_err(|e| e.to_string())?;
     Ok(monitor.snapshot())
 }
@@ -308,6 +311,10 @@ pub fn get_system_stats(state: tauri::State<'_, Mutex<Monitor>>) -> Result<Syste
 /// Terminates the process with the given PID via sysinfo.
 #[tauri::command]
 pub fn kill_process(pid: u32) -> Result<(), String> {
+    // Never let the UI end this app or core OS processes (Idle=0, System=4).
+    if pid <= 4 || pid == std::process::id() {
+        return Err(format!("Refusing to end protected process {pid}"));
+    }
     let mut sys = System::new();
     let target = Pid::from_u32(pid);
     sys.refresh_processes_specifics(

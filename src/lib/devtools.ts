@@ -172,9 +172,10 @@ export function parseUrlDetails(rawUrl: string): UrlDetails {
     };
   }
   try {
-    const urlStr = trimmed.startsWith("http://") || trimmed.startsWith("https://")
-      ? trimmed
-      : `https://${trimmed}`;
+    const urlStr =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://")
+        ? trimmed
+        : `https://${trimmed}`;
     const url = new URL(urlStr);
     const params: UrlParam[] = [];
     url.searchParams.forEach((value, key) => {
@@ -293,11 +294,7 @@ export function decodeJwt(token: string): EnhancedJwtDecoded {
 
 export type HashAlgo = "SHA-1" | "SHA-256" | "SHA-512";
 
-export async function hashText(
-  input: string,
-  algo: HashAlgo,
-  uppercase = false,
-): Promise<string> {
+export async function hashText(input: string, algo: HashAlgo, uppercase = false): Promise<string> {
   const data = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest(algo, data);
   const hex = Array.from(new Uint8Array(digest))
@@ -322,19 +319,51 @@ export function md5(input: string, uppercase = false): string {
     return safeAdd(bitRol(safeAdd(safeAdd(a, q), safeAdd(x, t)), s), b);
   }
 
-  function md5ff(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+  function md5ff(
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ): number {
     return md5cmn((b & c) | (~b & d), a, b, x, s, t);
   }
 
-  function md5gg(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+  function md5gg(
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ): number {
     return md5cmn((b & d) | (c & ~d), a, b, x, s, t);
   }
 
-  function md5hh(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+  function md5hh(
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ): number {
     return md5cmn(b ^ c ^ d, a, b, x, s, t);
   }
 
-  function md5ii(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
+  function md5ii(
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ): number {
     return md5cmn(c ^ (b | ~d), a, b, x, s, t);
   }
 
@@ -463,7 +492,7 @@ export function md5(input: string, uppercase = false): string {
   const words = [a, b, c, d];
   for (let i = 0; i < words.length * 32; i += 8) {
     hex +=
-      hexChars.charAt((words[i >> 5] >>> (i % 32 + 4)) & 0x0f) +
+      hexChars.charAt((words[i >> 5] >>> ((i % 32) + 4)) & 0x0f) +
       hexChars.charAt((words[i >> 5] >>> (i % 32)) & 0x0f);
   }
   return uppercase ? hex.toUpperCase() : hex.toLowerCase();
@@ -516,7 +545,12 @@ export function generateUuidV7(): string {
 
 export function generateUuidBatch(
   count: number,
-  options: { version?: "v4" | "v7"; uppercase?: boolean; noHyphen?: boolean; braces?: boolean } = {},
+  options: {
+    version?: "v4" | "v7";
+    uppercase?: boolean;
+    noHyphen?: boolean;
+    braces?: boolean;
+  } = {},
 ): string[] {
   const n = Math.min(Math.max(1, count), 100);
   const list: string[] = [];
@@ -583,13 +617,39 @@ export function replaceRegex(
 
 export const COMMON_REGEX_PRESETS = [
   { name: "Email", pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", flags: "g" },
-  { name: "URL", pattern: "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)", flags: "g" },
-  { name: "IPv4", pattern: "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", flags: "g" },
-  { name: "Phone (VN)", pattern: "^(?:\\+84|0)(?:3[2-9]|5[689]|7[06-9]|8[1-5]|9[0-9])[0-9]{7}$", flags: "g" },
-  { name: "Hex Color", pattern: "^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", flags: "g" },
-  { name: "Date (YYYY-MM-DD)", pattern: "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$", flags: "g" },
+  {
+    name: "URL",
+    pattern:
+      "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*)",
+    flags: "g",
+  },
+  {
+    name: "IPv4",
+    pattern:
+      "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+    flags: "g",
+  },
+  {
+    name: "Phone (VN)",
+    pattern: "^(?:\\+84|0)(?:3[2-9]|5[689]|7[06-9]|8[1-5]|9[0-9])[0-9]{7}$",
+    flags: "g",
+  },
+  {
+    name: "Hex Color",
+    pattern: "^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+    flags: "g",
+  },
+  {
+    name: "Date (YYYY-MM-DD)",
+    pattern: "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$",
+    flags: "g",
+  },
   { name: "Slug", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$", flags: "g" },
-  { name: "Strong Password", pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$", flags: "g" },
+  {
+    name: "Strong Password",
+    pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+    flags: "g",
+  },
 ];
 
 export function formatTimestampLocal(timestamp: number, isMs = false): string {
@@ -608,7 +668,11 @@ export function formatTimestampLocal(timestamp: number, isMs = false): string {
   });
 }
 
-export function getRelativeTime(timestamp: number, locale: "vi" | "en" = "vi", isMs = false): string {
+export function getRelativeTime(
+  timestamp: number,
+  locale: "vi" | "en" = "vi",
+  isMs = false,
+): string {
   const ms = isMs ? timestamp : timestamp * (Math.abs(timestamp) < 1e12 ? 1000 : 1);
   const diffSec = Math.floor((ms - Date.now()) / 1000);
   const absSec = Math.abs(diffSec);
@@ -655,14 +719,7 @@ export function decodeHtmlEntities(text: string): string {
 }
 
 export type CaseType =
-  | "camel"
-  | "pascal"
-  | "snake"
-  | "kebab"
-  | "constant"
-  | "title"
-  | "upper"
-  | "lower";
+  "camel" | "pascal" | "snake" | "kebab" | "constant" | "title" | "upper" | "lower";
 
 export function convertCase(text: string, toCase: CaseType): string {
   const words = text
@@ -677,7 +734,9 @@ export function convertCase(text: string, toCase: CaseType): string {
   switch (toCase) {
     case "camel":
       return words
-        .map((w, i) => (i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+        .map((w, i) =>
+          i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+        )
         .join("");
     case "pascal":
       return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join("");
@@ -698,12 +757,7 @@ export function convertCase(text: string, toCase: CaseType): string {
 
 export type CssUnit = "px" | "rem" | "em" | "pt";
 
-export function convertCssUnits(
-  value: number,
-  from: CssUnit,
-  to: CssUnit,
-  basePx = 16,
-): number {
+export function convertCssUnits(value: number, from: CssUnit, to: CssUnit, basePx = 16): number {
   if (from === to) return value;
   let px = value;
   if (from === "rem" || from === "em") {
@@ -719,14 +773,68 @@ export function convertCssUnits(
 }
 
 const LOREM_WORDS = [
-  "lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
-  "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
-  "magna", "aliqua", "enim", "ad", "minim", "veniam", "quis", "nostrud",
-  "exercitation", "ullamco", "laboris", "nisi", "aliquip", "ex", "ea", "commodo",
-  "consequat", "duis", "aute", "irure", "in", "reprehenderit", "voluptate", "velit",
-  "esse", "cillum", "fugiat", "nulla", "pariatur", "excepteur", "sint", "occaecat",
-  "cupidatat", "non", "proident", "sunt", "culpa", "qui", "officia", "deserunt",
-  "mollit", "anim", "id", "est", "laborum",
+  "lorem",
+  "ipsum",
+  "dolor",
+  "sit",
+  "amet",
+  "consectetur",
+  "adipiscing",
+  "elit",
+  "sed",
+  "do",
+  "eiusmod",
+  "tempor",
+  "incididunt",
+  "ut",
+  "labore",
+  "et",
+  "dolore",
+  "magna",
+  "aliqua",
+  "enim",
+  "ad",
+  "minim",
+  "veniam",
+  "quis",
+  "nostrud",
+  "exercitation",
+  "ullamco",
+  "laboris",
+  "nisi",
+  "aliquip",
+  "ex",
+  "ea",
+  "commodo",
+  "consequat",
+  "duis",
+  "aute",
+  "irure",
+  "in",
+  "reprehenderit",
+  "voluptate",
+  "velit",
+  "esse",
+  "cillum",
+  "fugiat",
+  "nulla",
+  "pariatur",
+  "excepteur",
+  "sint",
+  "occaecat",
+  "cupidatat",
+  "non",
+  "proident",
+  "sunt",
+  "culpa",
+  "qui",
+  "officia",
+  "deserunt",
+  "mollit",
+  "anim",
+  "id",
+  "est",
+  "laborum",
 ];
 
 export function generateLoremIpsum(

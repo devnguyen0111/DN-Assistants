@@ -7,11 +7,13 @@ function Toaster(props: ToasterProps) {
     <Sonner
       theme={theme}
       className="toaster group"
+      visibleToasts={3}
+      offset={16}
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:bg-elevated group-[.toaster]:text-text-1 group-[.toaster]:border-border group-[.toaster]:shadow-popover group-[.toaster]:max-w-[360px]",
+          description: "group-[.toast]:text-text-2",
         },
       }}
       {...props}

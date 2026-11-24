@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { animate, createScope } from "animejs";
-import { Clock3, MoonStar, Search, Sun, X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoonStar, Search, Sun, X } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +83,8 @@ export function ClockCard() {
     if (prevSecond.current === sec) return;
     prevSecond.current = sec;
     scope.current?.revert();
+    // anime.js ignores CSS reduced-motion rules, so honour the preference here.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     scope.current = createScope({ root: timeRef }).add(() => {
       animate(".clock-digit", {
         y: [
@@ -180,10 +182,7 @@ export function ClockCard() {
   return (
     <Card className="h-full overflow-hidden">
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          <Clock3 className="size-4 text-primary" />
-          {t.clock}
-        </CardTitle>
+        <h2 className="sr-only">{t.clock}</h2>
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -342,7 +341,7 @@ export function ClockCard() {
                 const parts = zonedParts(now, zone.iana);
                 const delta = dayDeltaLabel(primary, parts, t.yesterday, t.tomorrow);
                 return (
-                  <div key={zone.id} className="relative rounded-lg border bg-card/60 px-3 py-2.5">
+                  <div key={zone.id} className="relative rounded-lg border bg-card px-3 py-2.5">
                     <Button
                       variant="ghost"
                       size="icon"

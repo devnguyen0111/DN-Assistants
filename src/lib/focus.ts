@@ -1,4 +1,4 @@
-import Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb, newId } from "@/lib/db";
 
 export type FocusKind = "work" | "break" | "long_break";
 
@@ -8,20 +8,6 @@ export type FocusSession = {
   minutes: number;
   completed_at: string;
 };
-
-const DB_URL = "sqlite:dn-assistant.db";
-let dbPromise: Promise<Database> | null = null;
-
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
-}
-
-function newId() {
-  return crypto.randomUUID();
-}
 
 function todayStartIso(): string {
   const d = new Date();
@@ -41,7 +27,7 @@ export async function addSession(kind: FocusKind, minutes: number): Promise<Focu
     `INSERT INTO focus_sessions (id, kind, minutes, completed_at) VALUES ($1, $2, $3, $4)`,
     [session.id, session.kind, session.minutes, session.completed_at],
   );
-  window.dispatchEvent(new Event("dn-focus-changed"));
+  emitChange("focus");
   return session;
 }
 
@@ -128,4 +114,19 @@ export function saveTimerState(state: TimerState) {
 
 export function clearTimerState() {
   localStorage.removeItem(TIMER_KEY);
+}
+
+export async function listAllSessions(): Promise<FocusSession[]> {
+  const db = await getDb();
+  return db.select<FocusSession[]>("SELECT * FROM focus_sessions ORDER BY completed_at DESC");
+}
+
+/** Insert or replace a session by id (used by backup restore). */
+export async function upsertFocusSession(session: FocusSession): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    `INSERT INTO focus_sessions (id, kind, minutes, completed_at) VALUES ($1, $2, $3, $4)
+     ON CONFLICT(id) DO UPDATE SET kind = $2, minutes = $3, completed_at = $4`,
+    [session.id, session.kind, session.minutes, session.completed_at],
+  );
 }

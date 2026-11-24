@@ -11,7 +11,7 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -60,13 +60,8 @@ export function ColorStudioCard() {
 
   return (
     <Card className="h-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Palette className="size-5 text-primary" />
-          {t.colorStudioTitle}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+      <h2 className="sr-only">{t.colorStudioTitle}</h2>
+      <CardContent className="pt-panel">
         <Tabs defaultValue="picker" className="w-full">
           <TabsList className="flex-wrap">
             <TabsTrigger value="picker" className="gap-1.5">
@@ -152,14 +147,14 @@ function PickerTab({
           className="relative flex h-48 w-full items-end justify-between rounded-2xl border p-4 shadow-inner transition-colors"
           style={{ backgroundColor: hex }}
         >
-          <div className="rounded-lg bg-black/60 px-3 py-1.5 text-xs font-mono font-medium text-white backdrop-blur">
+          <div className="rounded-lg bg-black/60 px-3 py-1.5 text-xs font-mono font-medium text-white">
             {hex}
           </div>
 
           <Button
             size="sm"
             variant="secondary"
-            className="h-8 gap-1.5 bg-black/60 text-white backdrop-blur hover:bg-black/80"
+            className="h-8 gap-1.5 bg-black/60 text-white hover:bg-black/80"
             onClick={() => void copyText(hex, t.copied)}
           >
             <Copy className="size-3.5" />
@@ -283,13 +278,7 @@ function PickerTab({
   );
 }
 
-function HarmoniesTab({
-  hex,
-  onSelectHex,
-}: {
-  hex: string;
-  onSelectHex: (hex: string) => void;
-}) {
+function HarmoniesTab({ hex, onSelectHex }: { hex: string; onSelectHex: (hex: string) => void }) {
   const { t } = useI18n();
   const harmonies = useMemo(() => generateHarmonies(hex), [hex]);
 
@@ -308,7 +297,7 @@ function HarmoniesTab({
         {GROUPS.map(({ type, title }) => {
           const colors = harmonies[type];
           return (
-            <div key={type} className="rounded-xl border bg-card/60 p-3.5">
+            <div key={type} className="rounded-xl border bg-card p-3.5">
               <p className="mb-2 text-xs font-semibold text-muted-foreground">{title}</p>
               <div className="flex h-16 w-full overflow-hidden rounded-lg border shadow-sm">
                 {colors.map((c, i) => (
@@ -406,9 +395,7 @@ function ExtractorTab({ onSelectHex }: { onSelectHex: (hex: string) => void }) {
               alt="preview"
               className="max-h-40 rounded-xl border object-contain shadow-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Click or drop another image to replace
-            </p>
+            <p className="text-xs text-muted-foreground">Click or drop another image to replace</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -423,10 +410,12 @@ function ExtractorTab({ onSelectHex }: { onSelectHex: (hex: string) => void }) {
         )}
       </label>
 
-      {extracting && <p className="text-center text-xs text-muted-foreground">Extracting palette...</p>}
+      {extracting && (
+        <p className="text-center text-xs text-muted-foreground">Extracting palette...</p>
+      )}
 
       {extracted.length > 0 && (
-        <div className="rounded-xl border bg-card/60 p-4">
+        <div className="rounded-xl border bg-card p-4">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t.extractedColors}
           </p>
@@ -528,27 +517,22 @@ function ContrastTab({ initialFg }: { initialFg: string }) {
 
       {/* WCAG Compliance Scorecard */}
       <div className="grid gap-3 sm:grid-cols-5">
-        <div className="rounded-xl border bg-card/60 p-3 text-center sm:col-span-1">
+        <div className="rounded-xl border bg-card p-3 text-center sm:col-span-1">
           <p className="text-[10px] uppercase font-semibold text-muted-foreground">
             {t.contrastScore}
           </p>
-          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">
-            {contrast.ratio} : 1
-          </p>
+          <p className="mt-1 font-mono text-2xl font-bold tracking-tight">{contrast.ratio} : 1</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:col-span-4 sm:grid-cols-4">
-          <div className="rounded-xl border bg-card/60 p-3 text-center">
+          <div className="rounded-xl border bg-card p-3 text-center">
             <p className="text-[11px] text-muted-foreground">Normal AA (≥4.5)</p>
-            <Badge
-              variant={contrast.normalAa ? "default" : "destructive"}
-              className="mt-1 text-xs"
-            >
+            <Badge variant={contrast.normalAa ? "default" : "destructive"} className="mt-1 text-xs">
               {contrast.normalAa ? "Pass" : "Fail"}
             </Badge>
           </div>
 
-          <div className="rounded-xl border bg-card/60 p-3 text-center">
+          <div className="rounded-xl border bg-card p-3 text-center">
             <p className="text-[11px] text-muted-foreground">Normal AAA (≥7.0)</p>
             <Badge
               variant={contrast.normalAaa ? "default" : "destructive"}
@@ -558,22 +542,16 @@ function ContrastTab({ initialFg }: { initialFg: string }) {
             </Badge>
           </div>
 
-          <div className="rounded-xl border bg-card/60 p-3 text-center">
+          <div className="rounded-xl border bg-card p-3 text-center">
             <p className="text-[11px] text-muted-foreground">Large AA (≥3.0)</p>
-            <Badge
-              variant={contrast.largeAa ? "default" : "destructive"}
-              className="mt-1 text-xs"
-            >
+            <Badge variant={contrast.largeAa ? "default" : "destructive"} className="mt-1 text-xs">
               {contrast.largeAa ? "Pass" : "Fail"}
             </Badge>
           </div>
 
-          <div className="rounded-xl border bg-card/60 p-3 text-center">
+          <div className="rounded-xl border bg-card p-3 text-center">
             <p className="text-[11px] text-muted-foreground">Large AAA (≥4.5)</p>
-            <Badge
-              variant={contrast.largeAaa ? "default" : "destructive"}
-              className="mt-1 text-xs"
-            >
+            <Badge variant={contrast.largeAaa ? "default" : "destructive"} className="mt-1 text-xs">
               {contrast.largeAaa ? "Pass" : "Fail"}
             </Badge>
           </div>
@@ -723,7 +701,7 @@ function GradientsTab({ initialColor }: { initialColor: string }) {
       </div>
 
       {/* CSS Code Output */}
-      <div className="flex items-center gap-2 rounded-xl border bg-card/60 p-2.5">
+      <div className="flex items-center gap-2 rounded-xl border bg-card p-2.5">
         <Input readOnly value={cssCode} className="font-mono text-xs" />
         <Button
           size="sm"

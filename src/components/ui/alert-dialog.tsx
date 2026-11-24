@@ -13,7 +13,7 @@ const AlertDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-[var(--scrim)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -31,7 +31,7 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-xl",
+        "fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-48px)] w-[calc(100vw-48px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-elevated p-6 shadow-dialog",
         className,
       )}
       {...props}
@@ -41,9 +41,7 @@ const AlertDialogContent = React.forwardRef<
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
 function AlertDialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("flex flex-col gap-1.5 text-center sm:text-left", className)} {...props} />
-  );
+  return <div className={cn("flex flex-col gap-1 text-left", className)} {...props} />;
 }
 
 function AlertDialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -61,7 +59,7 @@ const AlertDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("text-section text-text-1", className)}
     {...props}
   />
 ));
@@ -73,7 +71,7 @@ const AlertDialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-body text-text-2", className)}
     {...props}
   />
 ));

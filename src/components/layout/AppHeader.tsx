@@ -1,85 +1,189 @@
-import { Keyboard, Languages, Moon, Sun, Monitor, Pin, PinOff } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ArrowUpCircle,
+  Keyboard,
+  Languages,
+  Loader2,
+  Monitor,
+  Moon,
+  Pin,
+  PinOff,
+  Search,
+  SlidersHorizontal,
+  Sun,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { useI18n } from "@/lib/i18n";
-import { pageDesc, pageTitle } from "@/lib/page-meta";
-import { useSettings } from "@/lib/settings-context";
-import { useTheme } from "@/lib/theme";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Kbd } from "@/components/ui/keyboard-hint";
+import { useUpdateState } from "@/hooks/useAutoUpdates";
+import { showUpdateDialog } from "@/lib/updates";
+import { useI18n, type Locale } from "@/lib/i18n";
 import type { AppRoute } from "@/lib/routing";
+import { useSettings } from "@/lib/settings-context";
+import { useTheme, type ThemeMode } from "@/lib/theme";
 
 type Props = {
-  route: AppRoute;
   onNavigate?: (route: AppRoute) => void;
-  onOpenShortcuts?: () => void;
 };
 
-export function AppHeader({ route, onNavigate, onOpenShortcuts }: Props) {
-  const { t, locale, toggleLocale } = useI18n();
-  const { mode, theme, toggleTheme } = useTheme();
+function useWide(query = "(min-width: 1200px)") {
+  const [wide, setWide] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setWide(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, [query]);
+  return wide;
+}
+
+const THEME_ICON: Record<ThemeMode, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
+
+/** Global utilities toolbar (spec §3). Page titles live in each page's PageHeader. */
+export function AppHeader(_props: Props) {
+  const { t, locale, setLocale } = useI18n();
+  const { mode, theme, setMode } = useTheme();
   const { settings, updateSettings } = useSettings();
+  const wide = useWide();
+  const update = useUpdateState();
+  const updateChip =
+    update.status === "available"
+      ? t.updateChipAvailable.replace("{version}", update.info.version)
+      : update.status === "downloading"
+        ? t.updateChipDownloading.replace(
+            "{percent}",
+            update.percent != null ? `${update.percent}%` : "…",
+          )
+        : update.status === "installing"
+          ? t.updateChipInstalling
+          : null;
+
+  const themeName: Record<ThemeMode, string> = {
+    light: t.themeLight,
+    dark: t.themeDark,
+    system: t.themeSystem,
+  };
+  const langName: Record<Locale, string> = { vi: "Tiếng Việt", en: "English" };
+  const ThemeIcon = THEME_ICON[mode];
+  const openShortcuts = () => window.dispatchEvent(new CustomEvent("dn-open-shortcuts"));
+
+  const themeItems = (
+    <DropdownMenuRadioGroup value={mode} onValueChange={(v) => setMode(v as ThemeMode)}>
+      {(["light", "dark", "system"] as ThemeMode[]).map((m) => {
+        const Icon = THEME_ICON[m];
+        return (
+          <DropdownMenuRadioItem key={m} value={m}>
+            <Icon className="size-4" />
+            {themeName[m]}
+            {m === "system" && (
+              <span className="ml-auto text-caption text-text-3">{themeName[theme]}</span>
+            )}
+          </DropdownMenuRadioItem>
+        );
+      })}
+    </DropdownMenuRadioGroup>
+  );
+
+  const langItems = (
+    <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+      {(["vi", "en"] as Locale[]).map((l) => (
+        <DropdownMenuRadioItem key={l} value={l}>
+          {langName[l]}
+        </DropdownMenuRadioItem>
+      ))}
+    </DropdownMenuRadioGroup>
+  );
 
   return (
-    <header className="mb-6 flex flex-wrap items-center justify-end gap-3 md:justify-between">
-      <div className="hidden min-w-0 flex-1 md:block">
-        <h1 className="truncate text-2xl font-semibold tracking-tight md:text-3xl">
-          {pageTitle(t, route)}
-        </h1>
-        <p className="truncate text-sm text-muted-foreground">{pageDesc(t, route)}</p>
-      </div>
-      <div className="flex items-center gap-2 rounded-xl border bg-card/70 p-1.5 backdrop-blur">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="font-mono text-xs text-muted-foreground"
-          onClick={() => window.dispatchEvent(new CustomEvent("dn-open-palette"))}
-          title={t.commandPalette}
-        >
-          {t.commandHint}
-        </Button>
-        <Separator orientation="vertical" className="h-6" />
+    <header className="flex min-w-0 items-center justify-between gap-2 border-b px-4 [@media(min-width:1200px)]:px-6">
+      <Button
+        variant="outline"
+        className="min-w-0 gap-2 text-text-2"
+        onClick={() => window.dispatchEvent(new CustomEvent("dn-open-palette"))}
+      >
+        <Search />
+        <span className="truncate">{t.toolbarCommands}</span>
+        <Kbd className="ml-4">Ctrl+K</Kbd>
+      </Button>
+
+      <div className="flex items-center gap-1">
+        {updateChip && (
+          <Button variant="secondary" className="text-accent-foreground" onClick={showUpdateDialog}>
+            {update.status === "available" ? (
+              <ArrowUpCircle />
+            ) : (
+              <Loader2 className="animate-spin motion-reduce:animate-none" />
+            )}
+            {updateChip}
+          </Button>
+        )}
         <Button
           variant={settings.alwaysOnTop ? "secondary" : "ghost"}
-          size="icon"
+          aria-pressed={settings.alwaysOnTop}
           onClick={() => void updateSettings({ alwaysOnTop: !settings.alwaysOnTop })}
-          title={t.alwaysOnTop}
         >
-          {settings.alwaysOnTop ? <Pin className="size-4" /> : <PinOff className="size-4" />}
+          {settings.alwaysOnTop ? <Pin /> : <PinOff />}
+          {settings.alwaysOnTop ? t.toolbarPinOn : t.toolbarPinOff}
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            if (onOpenShortcuts) onOpenShortcuts();
-            else window.dispatchEvent(new CustomEvent("dn-open-shortcuts"));
-          }}
-          title={t.shortcuts}
-        >
-          <Keyboard className="size-4" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={toggleLocale} title={t.language}>
-          <Languages className="size-4" />
-          {locale.toUpperCase()}
-        </Button>
-        <Separator orientation="vertical" className="h-6" />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleTheme}
-          title={t.theme}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            onNavigate?.("settings");
-          }}
-        >
-          {mode === "system" ? (
-            <Monitor className="size-4" />
-          ) : theme === "dark" ? (
-            <Sun className="size-4" />
-          ) : (
-            <Moon className="size-4" />
-          )}
-          {mode === "system" ? t.themeSystem : theme === "dark" ? t.themeLight : t.themeDark}
-        </Button>
+
+        {wide ? (
+          <>
+            <Button variant="ghost" onClick={openShortcuts}>
+              <Keyboard />
+              {t.shortcuts}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" aria-label={t.language}>
+                  <Languages />
+                  {langName[locale]}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">{langItems}</DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost">
+                  <ThemeIcon />
+                  {t.toolbarThemeValue.replace("{mode}", themeName[mode])}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">{themeItems}</DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost">
+                <SlidersHorizontal />
+                {t.toolbarOptions}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuLabel className="text-caption text-text-3">{t.theme}</DropdownMenuLabel>
+              {themeItems}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-caption text-text-3">
+                {t.language}
+              </DropdownMenuLabel>
+              {langItems}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={openShortcuts}>
+                <Keyboard />
+                {t.shortcuts}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );

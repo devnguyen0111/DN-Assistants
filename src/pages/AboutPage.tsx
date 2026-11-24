@@ -1,30 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { animate, createScope } from "animejs";
+import { useEffect, useState } from "react";
 import {
-  CalendarDays,
-  CheckSquare,
-  ClipboardList,
-  Clock3,
-  CloudSun,
-  Code2,
-  Coins,
   ExternalLink,
   Info,
-  KeyRound,
-  Monitor,
-  Network,
-  NotebookPen,
   Shield,
   Sparkles,
-  Timer,
-  Flame,
   Keyboard,
   ArrowUpCircle,
   Loader2,
-  CheckCircle2,
-  FileCode2,
-  Palette,
-  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 import { promptUpdateIfAvailable } from "@/lib/updates";
@@ -33,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/lib/i18n";
+import { NAV_GROUPS } from "@/lib/nav";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { navLabel } from "@/lib/page-meta";
 import { APP_VERSION } from "@/lib/settings";
 import { useSettings } from "@/lib/settings-context";
 import type { AppRoute } from "@/lib/routing";
@@ -72,33 +57,12 @@ async function loadAppVersion(): Promise<string> {
   }
 }
 
-const CATALOG: { route: AppRoute; icon: typeof Clock3; group: "main" | "tools" | "system" }[] = [
-  { route: "home", icon: Sparkles, group: "main" },
-  { route: "clock", icon: Clock3, group: "main" },
-  { route: "calendar", icon: CalendarDays, group: "main" },
-  { route: "calculator", icon: Coins, group: "tools" },
-  { route: "currency", icon: Coins, group: "tools" },
-  { route: "devtools", icon: Code2, group: "tools" },
-  { route: "habits", icon: CheckCircle2, group: "tools" },
-  { route: "snippets", icon: FileCode2, group: "tools" },
-  { route: "colors", icon: Palette, group: "tools" },
-  { route: "filetools", icon: Wrench, group: "tools" },
-  { route: "notes", icon: NotebookPen, group: "tools" },
-  { route: "todo", icon: CheckSquare, group: "tools" },
-  { route: "clipboard", icon: ClipboardList, group: "tools" },
-  { route: "passwords", icon: KeyRound, group: "tools" },
-  { route: "focus", icon: Timer, group: "tools" },
-  { route: "tiktok", icon: Flame, group: "tools" },
-  { route: "system", icon: Monitor, group: "system" },
-  { route: "network", icon: Network, group: "system" },
-  { route: "weather", icon: CloudSun, group: "system" },
-];
+/** Every module except Settings/About, in sidebar order. */
+const CATALOG = NAV_GROUPS.filter((g) => g.labelKey !== "navGroupApp").flatMap((g) => g.items);
 
 export function AboutPage({ onNavigate }: Props) {
   const { t } = useI18n();
   const { updateSettings } = useSettings();
-  const root = useRef<HTMLDivElement>(null);
-  const scope = useRef<ReturnType<typeof createScope> | null>(null);
   const [osInfo, setOsInfo] = useState<OsInfo | null>(null);
   const [version, setVersion] = useState("…");
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -108,46 +72,10 @@ export function AboutPage({ onNavigate }: Props) {
     void loadAppVersion().then(setVersion);
   }, []);
 
-  useEffect(() => {
-    if (!root.current) return;
-    scope.current = createScope({ root }).add(() => {
-      animate(".page-enter", {
-        opacity: [0, 1],
-        y: [16, 0],
-        duration: 420,
-        ease: "outCubic",
-      });
-    });
-    return () => scope.current?.revert();
-  }, []);
-
-  const labelFor = (route: AppRoute) => {
-    const map: Partial<Record<AppRoute, string>> = {
-      home: t.navHome,
-      clock: t.navClock,
-      calendar: t.navCalendar,
-      calculator: t.navCalculator,
-      currency: t.navCurrency,
-      devtools: t.navDevTools,
-      habits: t.navHabits,
-      snippets: t.navSnippets,
-      colors: t.navColors,
-      filetools: t.navFileTools,
-      notes: t.navNotes,
-      todo: t.navTodo,
-      clipboard: t.navClipboard,
-      passwords: t.navPasswords,
-      focus: t.navFocus,
-      tiktok: t.navTikTok,
-      system: t.navSystem,
-      network: t.navNetwork,
-      weather: t.navWeather,
-    };
-    return map[route] ?? route;
-  };
+  const labelFor = (route: AppRoute) => navLabel(t, route);
 
   return (
-    <div ref={root} className="page-enter mx-auto max-w-3xl space-y-4">
+    <PageLayout route="about" width="reading">
       <Card className="overflow-hidden">
         <CardContent className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center">
           <img src={logoUrl} alt="" className="size-16 rounded-2xl shadow-sm" />
@@ -228,7 +156,7 @@ export function AboutPage({ onNavigate }: Props) {
         <CardHeader>
           <CardTitle>{t.aboutCatalogTitle}</CardTitle>
           <CardDescription>
-            {t.navGroupMain} · {t.navGroupTools} · {t.navGroupSystem}
+            {t.navGroupToday} · {t.navGroupLibrary} · {t.navGroupTools} · {t.navGroupSystem}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -333,6 +261,6 @@ export function AboutPage({ onNavigate }: Props) {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageLayout>
   );
 }

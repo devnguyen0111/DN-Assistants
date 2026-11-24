@@ -1,11 +1,4 @@
-export type CaseTransform =
-  | "none"
-  | "lower"
-  | "upper"
-  | "title"
-  | "camel"
-  | "kebab"
-  | "snake";
+export type CaseTransform = "none" | "lower" | "upper" | "title" | "camel" | "kebab" | "snake";
 
 export type NumberPosition = "prefix" | "suffix" | "replace";
 
@@ -84,9 +77,7 @@ function transformCase(text: string, type: CaseTransform): string {
     case "title":
       return text.replace(/\b\w/g, (c) => c.toUpperCase());
     case "camel":
-      return text
-        .toLowerCase()
-        .replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase());
+      return text.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (_, chr) => chr.toUpperCase());
     case "kebab":
       return text
         .toLowerCase()
@@ -106,11 +97,7 @@ function transformCase(text: string, type: CaseTransform): string {
 /**
  * Transforms a single filename based on the configured rules.
  */
-export function renameOne(
-  filename: string,
-  index: number,
-  rule: BatchRenameRule,
-): string {
+export function renameOne(filename: string, index: number, rule: BatchRenameRule): string {
   const { base: origBase, ext: origExt } = splitNameAndExt(filename);
   let base = origBase;
   let ext = origExt;
@@ -175,6 +162,13 @@ export function renameOne(
   return ext ? `${base}.${ext}` : base;
 }
 
+/** Directory part of a Windows or POSIX path ("" when there is none). */
+export function dirOf(path?: string): string {
+  if (!path) return "";
+  const i = Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/"));
+  return i >= 0 ? path.slice(0, i) : "";
+}
+
 /**
  * Applies renaming rules across a batch of files and detects name collisions.
  */
@@ -185,15 +179,20 @@ export function applyBatchRename(
   const newNames: string[] = [];
   const counts = new Map<string, number>();
 
+  // Names only collide within the same folder (case-insensitive, like Windows).
+  const keyOf = (item: { path?: string }, name: string) =>
+    `${dirOf(item.path)}/${name}`.toLowerCase();
+
   items.forEach((item, index) => {
     const newName = renameOne(item.name, index, rule);
     newNames.push(newName);
-    counts.set(newName.toLowerCase(), (counts.get(newName.toLowerCase()) ?? 0) + 1);
+    const key = keyOf(item, newName);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   });
 
   return items.map((item, index) => {
-    const newName = newNames[index];
-    const isCollision = (counts.get(newName.toLowerCase()) ?? 0) > 1;
+    const newName = newNames[index]!;
+    const isCollision = (counts.get(keyOf(item, newName)) ?? 0) > 1;
     const isChanged = newName !== item.name;
 
     return {
@@ -206,54 +205,4 @@ export function applyBatchRename(
       isChanged,
     };
   });
-}
-
-/**
- * Generates an executable script (PowerShell .ps1 or Windows Batch .bat) for renaming.
- */
-export function generateBatchScript(
-  items: RenamedItem[],
-  format: "powershell" | "cmd" = "powershell",
-): string {
-  const changed = items.filter((i) => i.isChanged && !i.hasCollision);
-  if (changed.length === 0) return "";
-
-  if (format === "powershell") {
-    const lines = [
-      "# DN Assistant Batch Renamer Script",
-      "# Run this in PowerShell within the target folder",
-      "$ErrorActionPreference = 'Stop'",
-      "Write-Host 'Starting batch rename of " + changed.length + " files...' -ForegroundColor Cyan",
-      "",
-    ];
-
-    changed.forEach((item) => {
-      const src = item.originalName.replace(/'/g, "''");
-      const dst = item.newName.replace(/'/g, "''");
-      lines.push(`if (Test-Path -LiteralPath '${src}') { Rename-Item -LiteralPath '${src}' -NewName '${dst}' }`);
-    });
-
-    lines.push("");
-    lines.push("Write-Host 'Done! " + changed.length + " files renamed successfully.' -ForegroundColor Green");
-    return lines.join("\r\n");
-  }
-
-  // Windows Command Prompt Batch (.bat)
-  const lines = [
-    "@echo off",
-    "chcp 65001 > nul",
-    "echo [DN Assistant] Renaming " + changed.length + " files...",
-    "",
-  ];
-
-  changed.forEach((item) => {
-    const src = item.originalName.replace(/"/g, '""');
-    const dst = item.newName.replace(/"/g, '""');
-    lines.push(`if exist "${src}" ren "${src}" "${dst}"`);
-  });
-
-  lines.push("");
-  lines.push("echo Renaming complete!");
-  lines.push("pause");
-  return lines.join("\r\n");
 }

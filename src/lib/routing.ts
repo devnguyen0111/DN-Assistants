@@ -3,7 +3,6 @@ export type AppRoute =
   | "clock"
   | "calendar"
   | "calculator"
-  | "currency"
   | "devtools"
   | "notes"
   | "todo"
@@ -14,7 +13,6 @@ export type AppRoute =
   | "clipboard"
   | "passwords"
   | "focus"
-  | "tiktok"
   | "system"
   | "network"
   | "weather"
@@ -26,7 +24,6 @@ export const ROUTES: AppRoute[] = [
   "clock",
   "calendar",
   "calculator",
-  "currency",
   "devtools",
   "notes",
   "todo",
@@ -37,7 +34,6 @@ export const ROUTES: AppRoute[] = [
   "clipboard",
   "passwords",
   "focus",
-  "tiktok",
   "system",
   "network",
   "weather",
@@ -45,23 +41,35 @@ export const ROUTES: AppRoute[] = [
   "about",
 ];
 
-/** Routes for Alt+1..9 quick nav (first 9 primary destinations). */
+/** Routes for Alt+1..9 quick nav — follows the sidebar order of the most used pages. */
 export const SHORTCUT_ROUTES: AppRoute[] = [
   "home",
-  "clock",
   "calendar",
-  "calculator",
-  "system",
-  "weather",
-  "notes",
   "todo",
+  "habits",
   "focus",
+  "notes",
+  "calculator",
+  "devtools",
+  "system",
 ];
 
+/** Pages removed in v0.5 and where their content lives now. */
+const LEGACY_ROUTES: Record<string, AppRoute> = {
+  currency: "calculator",
+  tiktok: "habits",
+};
+
+/** Map any stored/linked route name (including retired ones) to a current route. */
+export function normalizeRoute(raw: string | null | undefined): AppRoute | null {
+  const key = (raw ?? "").toLowerCase();
+  if (ROUTES.includes(key as AppRoute)) return key as AppRoute;
+  return LEGACY_ROUTES[key] ?? null;
+}
+
 export function parseHashRoute(hash = window.location.hash): AppRoute {
-  const raw = hash.replace(/^#\/?/, "").split("/")[0]?.toLowerCase() ?? "";
-  if (ROUTES.includes(raw as AppRoute)) return raw as AppRoute;
-  return "home";
+  const raw = hash.replace(/^#\/?/, "").split("/")[0] ?? "";
+  return normalizeRoute(raw) ?? "home";
 }
 
 export type WidgetKind = "clock" | "focus" | "cpu" | "sticky";

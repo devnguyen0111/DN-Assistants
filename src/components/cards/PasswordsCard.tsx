@@ -13,6 +13,7 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
+import { copySecret } from "@/lib/secure-clipboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,7 +180,7 @@ export function PasswordsCard() {
 
   const copyText = async (value: string, label: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      await copySecret(value);
       toast.success(`${t.copied}: ${label}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -353,7 +354,7 @@ export function PasswordsCard() {
 
   if (!vaultExists) {
     return (
-      <Card className="mx-auto max-w-md">
+      <Card className="max-w-[440px]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="size-4 text-primary" />
@@ -392,7 +393,7 @@ export function PasswordsCard() {
 
   if (!unlocked) {
     return (
-      <Card className="mx-auto max-w-md">
+      <Card className="max-w-[440px]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="size-4 text-primary" />
@@ -424,40 +425,28 @@ export function PasswordsCard() {
 
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid items-start gap-4 @[880px]:grid-cols-[280px_minmax(0,1fr)]">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <KeyRound className="size-4 text-primary" />
-              {t.vaultTitle}
-            </CardTitle>
-            <div className="flex gap-1">
+            <h2 className="sr-only">{t.vaultTitle}</h2>
+            <div className="flex w-full flex-wrap gap-2">
+              <Button size="sm" onClick={startNew}>
+                <Plus />
+                {t.vaultAdd}
+              </Button>
+              <Button size="sm" variant="outline" onClick={onLock}>
+                <Lock />
+                {t.vaultLock}
+              </Button>
               <Button
                 size="icon"
                 variant="ghost"
-                className="size-8"
+                className="ml-auto size-8"
+                aria-label={t.vaultImport}
                 title={t.vaultImport}
                 onClick={() => void onImportCsv()}
               >
-                <Upload className="size-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                title={t.vaultAdd}
-                onClick={startNew}
-              >
-                <Plus className="size-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                title={t.vaultLock}
-                onClick={onLock}
-              >
-                <Lock className="size-4" />
+                <Upload />
               </Button>
             </div>
           </CardHeader>
@@ -471,7 +460,7 @@ export function PasswordsCard() {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <ScrollArea className="h-[480px] pr-2">
+            <ScrollArea className="h-[280px] pr-2 @[880px]:h-[calc(100dvh-320px)] @[880px]:min-h-[320px]">
               {filtered.length === 0 ? (
                 <EmptyState title={t.vaultEmpty} />
               ) : (
@@ -519,7 +508,7 @@ export function PasswordsCard() {
 
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">{selectedId ? t.vaultEdit : t.vaultAdd}</CardTitle>
+            <CardTitle>{selectedId ? t.vaultEdit : t.vaultAdd}</CardTitle>
             {selectedId && (
               <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
                 <Trash2 className="size-4" />

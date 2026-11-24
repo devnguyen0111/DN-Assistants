@@ -12,12 +12,7 @@ export type ContrastResult = {
 };
 
 export type HarmonyType =
-  | "complementary"
-  | "analogous"
-  | "triadic"
-  | "tetradic"
-  | "splitComplementary"
-  | "monochromatic";
+  "complementary" | "analogous" | "triadic" | "tetradic" | "splitComplementary" | "monochromatic";
 
 export function clamp(val: number, min: number, max: number): number {
   return Math.min(Math.max(val, min), max);

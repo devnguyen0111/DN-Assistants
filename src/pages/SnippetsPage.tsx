@@ -1,9 +1,10 @@
+import { PageLayout } from "@/components/layout/PageLayout";
 import { SnippetsCard } from "@/components/cards/SnippetsCard";
 
 export function SnippetsPage() {
   return (
-    <div className="space-y-4">
+    <PageLayout route="snippets">
       <SnippetsCard />
-    </div>
+    </PageLayout>
   );
 }

@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Calculator, Coins, Delete, Equal, Sparkles, SplitSquareVertical } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Banknote,
+  Calculator,
+  Coins,
+  Delete,
+  Equal,
+  Sparkles,
+  SplitSquareVertical,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -65,6 +75,10 @@ function loadHistory(): HistoryItem[] {
 function saveHistory(items: HistoryItem[]) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 12)));
 }
+
+const CurrencyCard = lazy(() =>
+  import("@/components/cards/CurrencyCard").then((m) => ({ default: m.CurrencyCard })),
+);
 
 export function CalculatorCard() {
   const { t } = useI18n();
@@ -339,6 +353,10 @@ export function CalculatorCard() {
             <SplitSquareVertical className="size-3.5" />
             {t.converter}
           </TabsTrigger>
+          <TabsTrigger value="currency" className="gap-1.5">
+            <Banknote className="size-3.5" />
+            {t.navCurrency}
+          </TabsTrigger>
           <TabsTrigger value="finance" className="gap-1.5">
             <Coins className="size-3.5" />
             {t.financeTab}
@@ -348,86 +366,154 @@ export function CalculatorCard() {
 
       {/* CALCULATOR TAB */}
       <TabsContent value="calc">
-        <div className="grid gap-4 md:grid-cols-[1fr_260px]">
+        <div className="grid items-start gap-4 @[880px]:grid-cols-[minmax(0,560px)_280px]">
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t.calculator}</CardTitle>
-              <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-0.5">
-                <Button
-                  size="sm"
-                  variant={calcMode === "standard" ? "secondary" : "ghost"}
-                  className="h-6 px-2 text-[11px]"
-                  onClick={() => setCalcMode("standard")}
+              <h2 className="sr-only">{t.calculator}</h2>
+              <SegmentedControl
+                size="sm"
+                label={t.calcMode}
+                value={calcMode}
+                onValueChange={setCalcMode}
+                options={[
+                  { value: "standard", label: t.standardCalc },
+                  { value: "scientific", label: t.scientificCalc },
+                ]}
+              />
+              {calcMode === "scientific" && (
+                <span
+                  className="rounded-xs bg-surface-3 px-1.5 py-0.5 font-mono text-caption text-text-2"
+                  title={t.calcDegreesHint}
                 >
-                  {t.standardCalc}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={calcMode === "scientific" ? "secondary" : "ghost"}
-                  className="h-6 px-2 text-[11px]"
-                  onClick={() => setCalcMode("scientific")}
-                >
-                  {t.scientificCalc}
-                </Button>
-              </div>
+                  DEG
+                </span>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
               {/* Display */}
-              <div className="rounded-xl border bg-muted/20 p-4 text-right">
-                <p className="min-h-5 font-mono text-xs text-muted-foreground">{expression || " "}</p>
-                <p className="overflow-x-auto font-mono text-3xl font-semibold tabular-nums tracking-tight">
-                  {display}
-                </p>
+              <div className="rounded-md border bg-surface-2 p-4 text-right" aria-live="polite">
+                <p className="min-h-5 font-mono text-caption text-text-3">{expression || " "}</p>
+                <p className="overflow-x-auto text-display tabular">{display}</p>
               </div>
 
               {/* Scientific Keypad */}
               {calcMode === "scientific" && (
-                <div className="grid grid-cols-5 gap-1.5 rounded-xl border bg-card/40 p-2 text-xs font-mono">
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("sin")}>
+                <div className="grid grid-cols-5 gap-2 font-mono">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("sin")}
+                  >
                     sin
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("cos")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("cos")}
+                  >
                     cos
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("tan")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("tan")}
+                  >
                     tan
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("log")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("log")}
+                  >
                     log
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("ln")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("ln")}
+                  >
                     ln
                   </Button>
 
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("sqrt")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("sqrt")}
+                  >
                     √
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("sqr")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("sqr")}
+                  >
                     x²
                   </Button>
                   <Button size="sm" variant="outline" className="h-8" onClick={() => applyOp("^")}>
                     xʸ
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("(")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("(")}
+                  >
                     (
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction(")")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction(")")}
+                  >
                     )
                   </Button>
 
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("inv")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("inv")}
+                  >
                     1/x
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("abs")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("abs")}
+                  >
                     |x|
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("pi")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("pi")}
+                  >
                     π
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8" onClick={() => applyFunction("e")}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-11"
+                    onClick={() => applyFunction("e")}
+                  >
                     e
                   </Button>
-                  <Button size="sm" variant="ghost" className="h-8 text-destructive" onClick={backspace}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-destructive"
+                    onClick={backspace}
+                  >
                     <Delete className="size-4" />
                   </Button>
                 </div>
@@ -443,11 +529,10 @@ export function CalculatorCard() {
                     return (
                       <Button
                         key={`${rIdx}-${key}`}
-                        variant={isEquals ? "default" : isOp ? "secondary" : isClear ? "outline" : "ghost"}
+                        variant={isEquals ? "default" : isOp ? "secondary" : "outline"}
                         className={cn(
-                          "h-12 font-mono text-base",
-                          isEquals && "bg-primary text-primary-foreground font-bold shadow",
-                          isClear && "text-destructive",
+                          "h-12 min-w-11 font-mono text-section",
+                          isClear && "text-danger",
                         )}
                         onClick={() => onKey(key)}
                       >
@@ -481,7 +566,9 @@ export function CalculatorCard() {
             <CardContent>
               <ScrollArea className="h-80 pr-3">
                 {history.length === 0 ? (
-                  <p className="pt-8 text-center text-xs text-muted-foreground">No recent calculations</p>
+                  <p className="pt-8 text-center text-xs text-muted-foreground">
+                    {t.calcNoHistory}
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {history.map((h, i) => (
@@ -610,6 +697,12 @@ export function CalculatorCard() {
       </TabsContent>
 
       {/* FINANCE & TIPS TAB (PRO SUITE) */}
+      <TabsContent value="currency">
+        <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+          <CurrencyCard />
+        </Suspense>
+      </TabsContent>
+
       <TabsContent value="finance">
         <div className="grid gap-4 md:grid-cols-2">
           {/* Bill Splitter & Tip */}
@@ -634,7 +727,8 @@ export function CalculatorCard() {
               {/* Tip Presets */}
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground">
-                  {t.tipPercent}: <span className="font-mono font-bold text-primary">{tipPercent}%</span>
+                  {t.tipPercent}:{" "}
+                  <span className="font-mono font-bold text-primary">{tipPercent}%</span>
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[0, 5, 10, 15, 20].map((pct) => (
@@ -727,7 +821,10 @@ export function CalculatorCard() {
 
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground">
-                  {t.discountPercent}: <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{discountPercent}%</span>
+                  {t.discountPercent}:{" "}
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {discountPercent}%
+                  </span>
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {[10, 15, 20, 25, 30, 50, 70].map((pct) => (

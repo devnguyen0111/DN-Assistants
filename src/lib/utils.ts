@@ -38,3 +38,8 @@ export function formatTimeHm(ms: number) {
   const d = new Date(ms);
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
+
+/** Local calendar date as YYYY-MM-DD (never use toISOString for this — it is UTC). */
+export function localDateKey(date = new Date()): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}

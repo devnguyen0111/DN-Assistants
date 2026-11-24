@@ -1,4 +1,5 @@
-import Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb, newId } from "@/lib/db";
+import { localDateKey } from "@/lib/utils";
 
 export type SnippetLanguage =
   | "text"
@@ -25,24 +26,6 @@ export type Snippet = {
   updated_at: string;
 };
 
-const DB_URL = "sqlite:dn-assistant.db";
-let dbPromise: Promise<Database> | null = null;
-
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
-}
-
-function notifyChanged() {
-  window.dispatchEvent(new Event("dn-snippets-changed"));
-}
-
-function newId() {
-  return crypto.randomUUID();
-}
-
 function normalize(row: Snippet): Snippet {
   return {
     ...row,
@@ -55,7 +38,7 @@ function normalize(row: Snippet): Snippet {
 
 export async function expandPlaceholders(template: string): Promise<string> {
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10);
+  const dateStr = localDateKey(now);
   const timeStr = now.toTimeString().slice(0, 8);
   const yearStr = String(now.getFullYear());
   const uuidStr = crypto.randomUUID();
@@ -127,7 +110,7 @@ export async function createSnippet(input: {
       snippet.updated_at,
     ],
   );
-  notifyChanged();
+  emitChange("snippets");
   return snippet;
 }
 
@@ -158,13 +141,13 @@ export async function updateSnippet(
     `UPDATE snippets SET title = $1, content = $2, category = $3, language = $4, tags = $5, pinned = $6, updated_at = $7 WHERE id = $8`,
     [title, content, category, language, tags, pinned, now, id],
   );
-  notifyChanged();
+  emitChange("snippets");
 }
 
 export async function deleteSnippet(id: string): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM snippets WHERE id = $1", [id]);
-  notifyChanged();
+  emitChange("snippets");
 }
 
 export async function searchSnippets(query: string): Promise<Snippet[]> {
@@ -206,5 +189,5 @@ export async function upsertSnippet(snippet: Snippet): Promise<void> {
       snippet.updated_at,
     ],
   );
-  notifyChanged();
+  emitChange("snippets");
 }

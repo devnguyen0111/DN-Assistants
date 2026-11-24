@@ -1,22 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  ClipboardList,
-  Copy,
-  ImageIcon,
-  Pin,
-  PinOff,
-  Save,
-  Search,
-  Trash2,
-  Type,
-  Wand2,
-  X,
-} from "lucide-react";
+import { Copy, ImageIcon, Pin, PinOff, Save, Search, Trash2, Wand2, X } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState, LoadingState } from "@/components/ui/state-block";
 import {
   AlertDialog,
@@ -248,10 +237,7 @@ export function ClipboardCard() {
     <>
       <Card className="h-full">
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="size-4 text-primary" />
-            {t.clipboardTitle}
-          </CardTitle>
+          <h2 className="sr-only">{t.clipboardTitle}</h2>
           <Button size="sm" variant="ghost" onClick={() => setConfirmClear(true)}>
             <Trash2 className="size-4" />
             {t.clipboardClear}
@@ -259,88 +245,89 @@ export function ClipboardCard() {
         </CardHeader>
         <CardContent className="space-y-3">
           {!settings.clipboardHistoryEnabled && (
-            <p className="rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-              {t.clipboardEnabledHint}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-warning-soft px-3 py-2">
+              <p className="text-body text-text-1">{t.clipboardEnabledHint}</p>
+              <Button
+                size="sm"
+                onClick={() => void updateSettings({ clipboardHistoryEnabled: true })}
+              >
+                {t.clipboardEnable}
+              </Button>
+            </div>
           )}
 
-          <div className="space-y-2 rounded-lg border border-border/60 p-2.5">
-            <p className="text-xs font-medium text-muted-foreground">{t.clipboardTemplates}</p>
-            {templates.length === 0 ? (
-              <p className="text-xs text-muted-foreground">—</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {templates.map((tpl, index) => (
-                  <div
-                    key={`${index}-${tpl.slice(0, 24)}`}
-                    className="group flex max-w-full items-center gap-0.5 rounded-md border bg-muted/30 pl-2"
-                  >
-                    <button
-                      type="button"
-                      className="max-w-[12rem] truncate py-1 text-left text-xs hover:underline"
-                      title={tpl}
-                      onClick={() => void copyTemplate(tpl)}
+          <details className="group/tpl rounded-md border px-3 py-2">
+            <summary className="cursor-pointer select-none text-label text-text-1">
+              {t.clipboardTemplates} ({templates.length})
+            </summary>
+            <div className="mt-2 space-y-2">
+              {templates.length === 0 ? (
+                <p className="text-xs text-muted-foreground">—</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {templates.map((tpl, index) => (
+                    <div
+                      key={`${index}-${tpl.slice(0, 24)}`}
+                      className="group flex max-w-full items-center gap-0.5 rounded-md border bg-muted/30 pl-2"
                     >
-                      {tpl}
-                    </button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-6 shrink-0 opacity-60 group-hover:opacity-100"
-                      title={t.delete}
-                      onClick={() => void removeTemplate(index)}
-                    >
-                      <X className="size-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                      <button
+                        type="button"
+                        className="max-w-[12rem] truncate py-1 text-left text-xs hover:underline"
+                        title={tpl}
+                        onClick={() => void copyTemplate(tpl)}
+                      >
+                        {tpl}
+                      </button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-6 shrink-0 opacity-60 group-hover:opacity-100"
+                        title={t.delete}
+                        onClick={() => void removeTemplate(index)}
+                      >
+                        <X className="size-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
 
-          <div className="flex flex-wrap gap-1.5">
-            {(
-              [
-                ["all", t.clipboardFilterAll],
-                ["pinned", t.filterPinned],
-                ["text", t.clipboardFilterText],
-                ["image", t.clipboardFilterImage],
-              ] as const
-            ).map(([key, label]) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={filter === key ? "default" : "outline"}
-                className="h-7 px-2.5 text-xs"
-                onClick={() => setFilter(key)}
-              >
-                {key === "pinned" && <Pin className="mr-1 size-3 text-primary" />}
-                {key === "text" && <Type className="mr-1 size-3" />}
-                {key === "image" && <ImageIcon className="mr-1 size-3" />}
-                {label}
-              </Button>
-            ))}
-          </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              className="pl-8"
-              placeholder={t.clipboardSearch}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-56 flex-1">
+              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-text-3" />
+              <Input
+                className="pl-8"
+                aria-label={t.clipboardSearch}
+                placeholder={t.clipboardSearch}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <SegmentedControl
+              label={t.clipboardFilterLabel}
+              value={filter}
+              onValueChange={setFilter}
+              options={[
+                { value: "all", label: t.clipboardFilterAll },
+                { value: "pinned", label: t.filterPinned },
+                { value: "text", label: t.clipboardFilterText },
+                { value: "image", label: t.clipboardFilterImage },
+              ]}
             />
           </div>
-          <ScrollArea className="h-[440px] pr-2">
+          <ScrollArea className="h-[calc(100dvh-380px)] min-h-[280px] pr-2">
             {loading ? (
               <LoadingState />
             ) : filtered.length === 0 ? (
               <EmptyState title={t.clipboardEmpty} />
             ) : (
-              <div className="space-y-1.5">
+              <div className="divide-y rounded-md border">
                 {filtered.map((item) => (
                   <div
                     key={item.id}
-                    className="group flex items-start gap-2 rounded-lg border border-border/60 px-3 py-2"
+                    className="group flex min-h-row items-start gap-2 px-3 py-2 hover:bg-surface-2"
                   >
                     <div className="min-w-0 flex-1">
                       {item.kind === "image" ? (

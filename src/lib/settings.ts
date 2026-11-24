@@ -1,4 +1,5 @@
-import type { AppRoute } from "@/lib/routing";
+import { windowId } from "@/lib/db";
+import { normalizeRoute, type AppRoute } from "@/lib/routing";
 
 export type AccentColor = "teal" | "blue" | "violet" | "rose" | "amber" | "emerald";
 
@@ -22,18 +23,34 @@ export type AppSettings = {
   onboardingDone: boolean;
   whatsNewSeenVersion: string;
   favoriteRoutes: AppRoute[];
+  /** Modules the user chose to hide from the sidebar (still reachable via Ctrl+K). */
+  hiddenRoutes: AppRoute[];
   alwaysOnTop: boolean;
   scratchpad: string;
   vaultAutoLockMinutes: number;
+  /** Seconds before a copied vault secret is wiped from the clipboard (0 = never). */
+  vaultClipboardClearSeconds: number;
   hotkeyToggleWindow: string;
   hotkeyClipboard: string;
   hotkeyScratchpad: string;
+  /** Opens the command palette from anywhere (shows the window if hidden). */
+  hotkeyLauncher: string;
   clipboardTemplates: string[];
   lastRoute: AppRoute;
   morningBriefEnabled: boolean;
   hibpCheckEnabled: boolean;
   autoCheckUpdates: boolean;
   skippedUpdateVersion: string;
+  /** "Remind me later": no automatic update prompt before this epoch ms. */
+  updateSnoozedUntil: number;
+  /** Scheduled encrypted backups (device-only, never exported in backups). */
+  autoBackupEnabled: boolean;
+  autoBackupDir: string;
+  /** Stored locally like the rest of the app data; protects the file once copied elsewhere. */
+  autoBackupPassword: string;
+  autoBackupIntervalHours: number;
+  autoBackupKeep: number;
+  lastAutoBackupAt: string;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -54,23 +71,51 @@ export const DEFAULT_SETTINGS: AppSettings = {
   onboardingDone: false,
   whatsNewSeenVersion: "",
   favoriteRoutes: [],
+  hiddenRoutes: [],
   alwaysOnTop: false,
   scratchpad: "",
   vaultAutoLockMinutes: 15,
+  vaultClipboardClearSeconds: 30,
   hotkeyToggleWindow: "CommandOrControl+Shift+Space",
   hotkeyClipboard: "CommandOrControl+Shift+V",
   hotkeyScratchpad: "CommandOrControl+Shift+N",
+  hotkeyLauncher: "CommandOrControl+Alt+K",
   clipboardTemplates: [],
   lastRoute: "home",
   morningBriefEnabled: false,
   hibpCheckEnabled: false,
   autoCheckUpdates: true,
   skippedUpdateVersion: "",
+  updateSnoozedUntil: 0,
+  autoBackupEnabled: false,
+  autoBackupDir: "",
+  autoBackupPassword: "",
+  autoBackupIntervalHours: 24,
+  autoBackupKeep: 7,
+  lastAutoBackupAt: "",
 };
+
+/** Machine-specific or secret settings: never written to exports, backups or diagnostics. */
+export const DEVICE_SETTINGS = [
+  "autoBackupEnabled",
+  "autoBackupDir",
+  "autoBackupPassword",
+  "autoBackupIntervalHours",
+  "autoBackupKeep",
+  "lastAutoBackupAt",
+] as const satisfies readonly (keyof AppSettings)[];
+
+/** Copy of settings that is safe to put in a file the user may share or sync. */
+export function exportableSettings(settings: AppSettings): Partial<AppSettings> {
+  const copy: Partial<AppSettings> = { ...settings };
+  for (const key of DEVICE_SETTINGS) delete copy[key];
+  return copy;
+}
 
 export const ACCENT_OPTIONS: AccentColor[] = ["teal", "blue", "violet", "rose", "amber", "emerald"];
 
-export const APP_VERSION = "0.3.2";
+/** Single source of truth: package.json (injected by Vite). */
+export const APP_VERSION = __APP_VERSION__;
 
 const LS_KEY = "dn-assistant-settings";
 const STORE_FILE = "settings.json";
@@ -113,9 +158,22 @@ function writeLocal(settings: AppSettings) {
 
 function sanitize(partial: Partial<AppSettings>): Partial<AppSettings> {
   const next = { ...partial };
+  // Routes may come from older versions (e.g. "tiktok", "currency"); map or drop them.
+  const routeList = (list: unknown): AppRoute[] | undefined =>
+    Array.isArray(list)
+      ? [...new Set(list.map((r) => normalizeRoute(String(r))).filter((r): r is AppRoute => !!r))]
+      : undefined;
   if (next.favoriteRoutes) {
-    next.favoriteRoutes = next.favoriteRoutes.filter(Boolean);
+    next.favoriteRoutes = (routeList(next.favoriteRoutes) ?? []).filter(
+      (r) => r !== "settings" && r !== "about",
+    );
   }
+  if (next.hiddenRoutes) {
+    next.hiddenRoutes = (routeList(next.hiddenRoutes) ?? []).filter(
+      (r) => r !== "home" && r !== "settings" && r !== "about",
+    );
+  }
+  if (next.lastRoute !== undefined) next.lastRoute = normalizeRoute(next.lastRoute) ?? "home";
   if (next.clipboardTemplates) {
     next.clipboardTemplates = next.clipboardTemplates.filter((t) => t.trim().length > 0);
   }
@@ -178,6 +236,11 @@ if (typeof window !== "undefined") {
   });
 }
 
+/** Write any debounced settings now (e.g. before the updater terminates the process). */
+export async function flushPendingSettings(): Promise<void> {
+  await flushStoreSave();
+}
+
 function queueStoreSave(settings: AppSettings) {
   pendingStoreSettings = settings;
   if (storeSaveTimer != null) {
@@ -208,11 +271,45 @@ export async function saveSettings(partial: Partial<AppSettings>): Promise<AppSe
       // ignore outside Tauri
     }
   }
-  if (partial.alwaysOnTop !== undefined) {
+  if (partial.alwaysOnTop !== undefined && !isWidgetWindow()) {
     await applyAlwaysOnTop(next.alwaysOnTop);
   }
   window.dispatchEvent(new CustomEvent("dn-settings-changed", { detail: next }));
+  void broadcastSettings(next);
   return next;
+}
+
+const SETTINGS_SYNC_EVENT = "dn-settings-sync";
+type SettingsSyncPayload = { settings: AppSettings; from: string };
+
+async function broadcastSettings(settings: AppSettings) {
+  try {
+    const { emit } = await import("@tauri-apps/api/event");
+    await emit(SETTINGS_SYNC_EVENT, { settings, from: windowId() } satisfies SettingsSyncPayload);
+  } catch {
+    // browser preview
+  }
+}
+
+let settingsSyncStarted = false;
+
+/**
+ * Keep this window's settings in step with changes saved by other windows (e.g. the sticky
+ * widget editing the scratchpad) so a later save here does not overwrite them with stale values.
+ */
+export async function startSettingsSync(): Promise<void> {
+  if (settingsSyncStarted) return;
+  settingsSyncStarted = true;
+  try {
+    const { listen } = await import("@tauri-apps/api/event");
+    await listen<SettingsSyncPayload>(SETTINGS_SYNC_EVENT, (e) => {
+      if (e.payload.from === windowId()) return;
+      writeLocal(e.payload.settings);
+      window.dispatchEvent(new CustomEvent("dn-settings-changed", { detail: e.payload.settings }));
+    });
+  } catch {
+    settingsSyncStarted = false;
+  }
 }
 
 export function subscribeSettings(cb: (s: AppSettings) => void): () => void {
@@ -231,5 +328,11 @@ export async function getAppStore(): Promise<StoreLike | null> {
 
 /** Apply window flags that must run after Tauri is ready. */
 export async function applyDesktopWindowPrefs(settings: AppSettings) {
+  // Floating widgets manage their own always-on-top flag; only the main window follows settings.
+  if (isWidgetWindow()) return;
   await applyAlwaysOnTop(settings.alwaysOnTop);
+}
+
+function isWidgetWindow(): boolean {
+  return /^#\/?widget\//i.test(window.location.hash);
 }

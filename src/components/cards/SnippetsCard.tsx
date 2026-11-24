@@ -1,19 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Code2,
-  Copy,
-  FileCode2,
-  MoreVertical,
-  Pin,
-  Plus,
-  Search,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { Code2, Copy, MoreVertical, Pin, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -210,10 +200,7 @@ export function SnippetsCard() {
       <Card>
         <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-              <FileCode2 className="size-5 text-primary" />
-              {t.snippetsTitle}
-            </CardTitle>
+            <h2 className="sr-only">{t.snippetsTitle}</h2>
             <Badge variant="secondary" className="font-mono text-xs">
               {items.length}
             </Badge>
@@ -270,7 +257,7 @@ export function SnippetsCard() {
               return (
                 <div
                   key={item.id}
-                  className="rounded-xl border bg-card/40 p-3.5 transition-colors hover:bg-card/70"
+                  className="rounded-xl border bg-card p-3.5 transition-colors hover:bg-card"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -299,7 +286,10 @@ export function SnippetsCard() {
 
                       {item.tags && (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {item.tags.split(",").map((t) => `#${t.trim()}`).join(" ")}
+                          {item.tags
+                            .split(",")
+                            .map((t) => `#${t.trim()}`)
+                            .join(" ")}
                         </p>
                       )}
                     </div>
@@ -312,7 +302,9 @@ export function SnippetsCard() {
                         className="h-8 gap-1.5"
                       >
                         <Copy className="size-3.5" />
-                        <span>{t.copied.replace("Đã sao chép", "Sao chép").replace("Copied", "Copy")}</span>
+                        <span>
+                          {t.copied.replace("Đã sao chép", "Sao chép").replace("Copied", "Copy")}
+                        </span>
                       </Button>
 
                       <Button
@@ -380,10 +372,7 @@ export function SnippetsCard() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>{t.snippetLanguage}</Label>
-                <Select
-                  value={language}
-                  onValueChange={(v) => setLanguage(v as SnippetLanguage)}
-                >
+                <Select value={language} onValueChange={(v) => setLanguage(v as SnippetLanguage)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -420,7 +409,7 @@ export function SnippetsCard() {
               <div className="flex items-center justify-between">
                 <Label>{t.snippetContent}</Label>
                 <span className="text-[11px] text-muted-foreground">
-                  Supports dynamic variables
+                  {t.snippetsSupportsVars}
                 </span>
               </div>
               <Textarea

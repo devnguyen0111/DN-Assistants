@@ -11,9 +11,11 @@ import { formatTimeHm } from "@/lib/utils";
 type Props = {
   refreshKey?: number;
   onEditEvent?: (event: CalendarEvent) => void;
+  /** `rail`: compact list under the calendar's selected day. */
+  variant?: "card" | "rail";
 };
 
-export function AgendaCard({ refreshKey = 0, onEditEvent }: Props) {
+export function AgendaCard({ refreshKey = 0, onEditEvent, variant = "card" }: Props) {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -38,7 +40,7 @@ export function AgendaCard({ refreshKey = 0, onEditEvent }: Props) {
   }, [refreshKey]);
 
   return (
-    <Card className="h-full">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarClock className="size-4 text-primary" />
@@ -46,7 +48,7 @@ export function AgendaCard({ refreshKey = 0, onEditEvent }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[280px] pr-2">
+        <ScrollArea className={variant === "rail" ? "max-h-[280px] pr-2" : "h-[280px] pr-2"}>
           {loading && <LoadingState title={t.loading} />}
           {!loading && error && (
             <ErrorState

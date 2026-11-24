@@ -1,4 +1,4 @@
-import Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb } from "@/lib/db";
 
 export type EventRepeat = "none" | "daily" | "weekly";
 
@@ -28,16 +28,6 @@ export type EventInput = {
   repeat?: EventRepeat;
   repeat_until?: number | null;
 };
-
-const DB_URL = "sqlite:dn-assistant.db";
-let dbPromise: Promise<Database> | null = null;
-
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
-}
 
 function normalizeRepeat(value: unknown): EventRepeat {
   if (value === "daily" || value === "weekly") return value;
@@ -97,6 +87,7 @@ export async function createEvent(input: EventInput): Promise<number> {
       now,
     ],
   );
+  emitChange("events");
   return Number(result.lastInsertId ?? 0);
 }
 
@@ -121,6 +112,7 @@ export async function updateEvent(id: number, input: EventInput): Promise<void> 
       id,
     ],
   );
+  emitChange("events");
 }
 
 /** Insert with explicit id when present (import), otherwise autoincrement. */
@@ -187,6 +179,7 @@ export async function upsertEventFromImport(event: CalendarEvent): Promise<void>
 export async function deleteEvent(id: number): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM events WHERE id = $1", [id]);
+  emitChange("events");
 }
 
 /** Next daily/weekly occurrence after fromMs, within repeat_until if set. */

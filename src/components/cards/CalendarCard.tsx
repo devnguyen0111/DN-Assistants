@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { animate, createScope } from "animejs";
 import { ChevronLeft, ChevronRight, Plus, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { localeTag, useI18n } from "@/lib/i18n";
+import { emitChange } from "@/lib/db";
 import {
   createEvent,
   deleteEvent,
@@ -35,6 +37,7 @@ import {
   type EventRepeat,
 } from "@/lib/events";
 import { exportEventsToIcs, parseIcs } from "@/lib/ics";
+import { weekStartsOn } from "@/lib/datetime";
 import { isSoundMuted, setSoundMuted } from "@/lib/notify";
 import { cn, formatTimeHm } from "@/lib/utils";
 
@@ -42,6 +45,8 @@ type Props = {
   onEventsChanged?: () => void;
   editEvent?: CalendarEvent | null;
   onEditConsumed?: () => void;
+  /** Rendered under the selected-day agenda in the right rail. */
+  upcoming?: ReactNode;
 };
 
 const EVENT_COLORS = ["#38bdf8", "#34d399", "#fbbf24", "#f472b6", "#a78bfa", "#fb7185"];
@@ -62,7 +67,7 @@ function chipLabel(event: CalendarEvent, allDayLabel: string) {
   return `${formatTimeHm(event.start_at)} ${event.title}`;
 }
 
-export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Props) {
+export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed, upcoming }: Props) {
   const { locale, t } = useI18n();
   const tag = localeTag(locale);
   const [cursor, setCursor] = useState(() => {
@@ -71,6 +76,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   });
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date());
+  const [view, setView] = useState<"month" | "agenda">("month");
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -94,7 +100,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
     try {
       setEvents(await listEvents());
       onEventsChanged?.();
-      window.dispatchEvent(new Event("dn-events-changed"));
+      emitChange("events");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
@@ -127,6 +133,8 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   useEffect(() => {
     if (!gridRef.current) return;
     scope.current?.revert();
+    // anime.js ignores CSS reduced-motion rules, so honour the preference here.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     scope.current = createScope({ root: gridRef }).add(() => {
       animate(".cal-cell", {
         opacity: [0, 1],
@@ -147,10 +155,11 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   const weekdayLabels = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(tag, { weekday: "short" });
     return Array.from({ length: 7 }, (_, i) => {
-      const day = new Date(Date.UTC(2024, 0, 7 + i));
+      // 7 Jan 2024 is a Sunday; Vietnamese weeks start on Monday.
+      const day = new Date(Date.UTC(2024, 0, 7 + i + weekStartsOn(locale)));
       return formatter.format(day);
     });
-  }, [tag]);
+  }, [tag, locale]);
 
   const selectedDayLabel = useMemo(
     () =>
@@ -167,7 +176,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
   const cells = useMemo(() => {
     const year = cursor.getFullYear();
     const month = cursor.getMonth();
-    const firstWeekday = new Date(year, month, 1).getDay();
+    const firstWeekday = (new Date(year, month, 1).getDay() - weekStartsOn(locale) + 7) % 7;
     const total = daysInMonth(year, month);
     const items: Array<{ date: Date | null; key: string }> = [];
     for (let i = 0; i < firstWeekday; i += 1) items.push({ date: null, key: `e-${i}` });
@@ -178,7 +187,7 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
       items.push({ date: null, key: `t-${items.length}` });
     }
     return items;
-  }, [cursor]);
+  }, [cursor, locale]);
 
   const dayEvents = useMemo(
     () =>
@@ -309,10 +318,10 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
 
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
-        <Card className="h-full">
+      <div className="grid items-start gap-4 @[960px]:grid-cols-[minmax(0,1fr)_320px]">
+        <Card>
           <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-            <CardTitle>{t.calendar}</CardTitle>
+            <h2 className="sr-only">{t.calendar}</h2>
             <div className="flex flex-wrap items-center gap-1">
               <Button
                 variant="ghost"
@@ -322,6 +331,16 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
               >
                 {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
               </Button>
+              <SegmentedControl
+                size="sm"
+                label={t.calendarView}
+                value={view}
+                onValueChange={setView}
+                options={[
+                  { value: "month", label: t.calendarMonth },
+                  { value: "agenda", label: t.calendarAgenda },
+                ]}
+              />
               <Button variant="outline" size="sm" onClick={goToday}>
                 {t.today}
               </Button>
@@ -364,143 +383,158 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
-              {weekdayLabels.map((label) => (
-                <div key={label}>{label}</div>
-              ))}
-            </div>
-            <div
-              ref={gridRef}
-              className="grid grid-cols-7 gap-1"
-              role="grid"
-              aria-label={t.calendar}
-              onKeyDown={(e) => {
-                const delta =
-                  e.key === "ArrowLeft"
-                    ? -1
-                    : e.key === "ArrowRight"
-                      ? 1
-                      : e.key === "ArrowUp"
-                        ? -7
-                        : e.key === "ArrowDown"
-                          ? 7
-                          : 0;
-                if (!delta) return;
-                e.preventDefault();
-                setSelectedDay((prev) => {
-                  const next = new Date(prev);
-                  next.setDate(next.getDate() + delta);
-                  setCursor(new Date(next.getFullYear(), next.getMonth(), 1));
-                  return next;
-                });
-              }}
-            >
-              {cells.map((cell) => {
-                if (!cell.date) {
-                  return (
-                    <div
-                      key={cell.key}
-                      className="cal-cell min-h-[72px] rounded-md border border-transparent bg-muted/10"
-                    />
-                  );
-                }
-                const cellEvents = events
-                  .filter((event) => sameDay(event.start_at, cell.date!.getTime()))
-                  .sort((a, b) => a.start_at - b.start_at);
-                const isToday = startOfDay(cell.date.getTime()) === today;
-                const isSelected = sameDay(selectedDay.getTime(), cell.date.getTime());
-                const visible = cellEvents.slice(0, 2);
-                const extra = cellEvents.length - visible.length;
-                return (
-                  <button
-                    key={cell.key}
-                    type="button"
-                    className={cn(
-                      "cal-cell flex min-h-[72px] flex-col items-stretch rounded-md border border-transparent p-1 text-left text-xs transition-colors hover:border-border hover:bg-accent",
-                      isToday && "border-primary/40 bg-primary/10",
-                      isSelected && "ring-1 ring-ring",
-                    )}
-                    onClick={() => setSelectedDay(cell.date!)}
-                  >
-                    <span className="mb-0.5 px-0.5 font-medium tabular-nums">
-                      {cell.date.getDate()}
-                    </span>
-                    <div className="flex min-h-[36px] flex-col gap-0.5">
-                      {visible.map((event) => (
-                        <span
-                          key={event.id}
-                          className="truncate rounded px-1 py-0.5 text-[10px] leading-tight text-white"
-                          style={{ background: event.color ?? "#38bdf8" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEdit(event);
-                          }}
-                        >
-                          {chipLabel(event, t.allDay)}
+            {view === "agenda" ? (
+              <AgendaList
+                events={events}
+                locale={locale}
+                allDayLabel={t.allDay}
+                emptyLabel={t.noDayEvents}
+                onOpen={openEdit}
+              />
+            ) : (
+              <>
+                <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
+                  {weekdayLabels.map((label) => (
+                    <div key={label}>{label}</div>
+                  ))}
+                </div>
+                <div
+                  ref={gridRef}
+                  className="grid grid-cols-7 gap-1"
+                  role="grid"
+                  aria-label={t.calendar}
+                  onKeyDown={(e) => {
+                    const delta =
+                      e.key === "ArrowLeft"
+                        ? -1
+                        : e.key === "ArrowRight"
+                          ? 1
+                          : e.key === "ArrowUp"
+                            ? -7
+                            : e.key === "ArrowDown"
+                              ? 7
+                              : 0;
+                    if (!delta) return;
+                    e.preventDefault();
+                    setSelectedDay((prev) => {
+                      const next = new Date(prev);
+                      next.setDate(next.getDate() + delta);
+                      setCursor(new Date(next.getFullYear(), next.getMonth(), 1));
+                      return next;
+                    });
+                  }}
+                >
+                  {cells.map((cell) => {
+                    if (!cell.date) {
+                      return (
+                        <div
+                          key={cell.key}
+                          className="cal-cell min-h-[72px] rounded-md border border-transparent bg-muted/10"
+                        />
+                      );
+                    }
+                    const cellEvents = events
+                      .filter((event) => sameDay(event.start_at, cell.date!.getTime()))
+                      .sort((a, b) => a.start_at - b.start_at);
+                    const isToday = startOfDay(cell.date.getTime()) === today;
+                    const isSelected = sameDay(selectedDay.getTime(), cell.date.getTime());
+                    const visible = cellEvents.slice(0, 2);
+                    const extra = cellEvents.length - visible.length;
+                    return (
+                      <button
+                        key={cell.key}
+                        type="button"
+                        className={cn(
+                          "cal-cell flex min-h-[72px] flex-col items-stretch rounded-md border border-transparent p-1 text-left text-xs transition-colors hover:border-border hover:bg-accent",
+                          isToday && "border-primary/40 bg-primary/10",
+                          isSelected && "ring-1 ring-ring",
+                        )}
+                        onClick={() => setSelectedDay(cell.date!)}
+                      >
+                        <span className="mb-0.5 px-0.5 font-medium tabular-nums">
+                          {cell.date.getDate()}
                         </span>
-                      ))}
-                      {extra > 0 && (
-                        <span className="px-0.5 text-[10px] text-muted-foreground">
-                          {t.moreEvents.replace("{n}", String(extra))}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                        <div className="flex min-h-[36px] flex-col gap-0.5">
+                          {visible.map((event) => (
+                            <span
+                              key={event.id}
+                              className="truncate rounded px-1 py-0.5 text-[10px] leading-tight text-white"
+                              style={{ background: event.color ?? "#38bdf8" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEdit(event);
+                              }}
+                            >
+                              {chipLabel(event, t.allDay)}
+                            </span>
+                          ))}
+                          {extra > 0 && (
+                            <span className="px-0.5 text-[10px] text-muted-foreground">
+                              {t.moreEvents.replace("{n}", String(extra))}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="h-full">
-          <CardHeader className="space-y-1">
-            <CardTitle>{t.dayEvents}</CardTitle>
-            <p className="text-xs capitalize text-muted-foreground">{selectedDayLabel}</p>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[420px] pr-2">
-              {dayEvents.length === 0 ? (
-                <div className="flex h-[200px] flex-col items-center justify-center gap-3 text-center">
-                  <p className="text-sm text-muted-foreground">{t.noDayEvents}</p>
-                  <Button size="sm" variant="outline" onClick={() => openCreate(selectedDay)}>
-                    <Plus className="size-4" />
-                    {t.addEvent}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {dayEvents.map((event) => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      className="flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-left hover:bg-accent"
-                      onClick={() => openEdit(event)}
-                    >
-                      <span
-                        className="mt-1.5 size-2.5 shrink-0 rounded-full"
-                        style={{ background: event.color ?? "#38bdf8" }}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{event.title}</p>
-                        <p className="font-mono text-xs tabular-nums text-muted-foreground">
-                          {formatEventRange(event, t.allDay)}
-                        </p>
-                        {event.note && (
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                            {event.note}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle>{t.dayEvents}</CardTitle>
+              <p className="text-xs capitalize text-muted-foreground">{selectedDayLabel}</p>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="max-h-[360px] pr-2">
+                {dayEvents.length === 0 ? (
+                  <div className="flex flex-col items-start gap-2 py-2">
+                    <p className="text-sm text-muted-foreground">{t.noDayEvents}</p>
+                    <Button size="sm" variant="outline" onClick={() => openCreate(selectedDay)}>
+                      <Plus className="size-4" />
+                      {t.addEvent}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {dayEvents.map((event) => (
+                      <button
+                        key={event.id}
+                        type="button"
+                        className="flex w-full items-start gap-2 rounded-lg border px-3 py-2 text-left hover:bg-accent"
+                        onClick={() => openEdit(event)}
+                      >
+                        <span
+                          className="mt-1.5 size-2.5 shrink-0 rounded-full"
+                          style={{ background: event.color ?? "#38bdf8" }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{event.title}</p>
+                          <p className="font-mono text-xs tabular-nums text-muted-foreground">
+                            {formatEventRange(event, t.allDay)}
                           </p>
-                        )}
-                      </div>
-                      <Badge variant="secondary" className="shrink-0 font-mono tabular-nums">
-                        {event.all_day === 1 ? t.allDay : formatTimeHm(event.start_at)}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
+                          {event.note && (
+                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                              {event.note}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant="secondary" className="shrink-0 font-mono tabular-nums">
+                          {event.all_day === 1 ? t.allDay : formatTimeHm(event.start_at)}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+          {upcoming}
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -609,5 +643,62 @@ export function CalendarCard({ onEventsChanged, editEvent, onEditConsumed }: Pro
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/** Chronological, date-grouped list of upcoming events (Agenda view). */
+function AgendaList({
+  events,
+  locale,
+  allDayLabel,
+  emptyLabel,
+  onOpen,
+}: {
+  events: CalendarEvent[];
+  locale: "vi" | "en";
+  allDayLabel: string;
+  emptyLabel: string;
+  onOpen: (e: CalendarEvent) => void;
+}) {
+  const from = startOfDay(Date.now());
+  const upcoming = events
+    .filter((e) => (e.end_at ?? e.start_at) >= from)
+    .sort((a, b) => a.start_at - b.start_at)
+    .slice(0, 100);
+  if (upcoming.length === 0) return <p className="py-6 text-body text-text-3">{emptyLabel}</p>;
+  const dayFmt = new Intl.DateTimeFormat(localeTag(locale), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const groups = new Map<number, CalendarEvent[]>();
+  for (const e of upcoming) {
+    const key = startOfDay(e.start_at);
+    groups.set(key, [...(groups.get(key) ?? []), e]);
+  }
+  return (
+    <div className="space-y-4">
+      {[...groups.entries()].map(([day, list]) => (
+        <section key={day} className="space-y-1">
+          <h3 className="text-label capitalize text-text-1">{dayFmt.format(new Date(day))}</h3>
+          <ul className="divide-y rounded-md border">
+            {list.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpen(e)}
+                  className="flex min-h-row w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                >
+                  <span className="w-28 shrink-0 text-caption tabular text-text-3">
+                    {formatEventRange(e, allDayLabel)}
+                  </span>
+                  <span className="truncate text-body">{e.title}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }

@@ -22,7 +22,13 @@ export function useDesktopHotkeys(options: Options = {}) {
       void unregisterAllGlobalHotkeys();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, settings.hotkeyToggleWindow, settings.hotkeyClipboard, settings.hotkeyScratchpad]);
+  }, [
+    ready,
+    settings.hotkeyToggleWindow,
+    settings.hotkeyClipboard,
+    settings.hotkeyScratchpad,
+    settings.hotkeyLauncher,
+  ]);
 
   useEffect(() => {
     const onClipboard = () => onNavigate?.("clipboard");

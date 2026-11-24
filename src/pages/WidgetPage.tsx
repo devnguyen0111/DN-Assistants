@@ -70,6 +70,13 @@ export function WidgetPage({ kind }: Props) {
   );
 
   const close = async () => {
+    if (debounceRef.current != null) {
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+      await updateSettings({ scratchpad: scratchText });
+      const { flushPendingSettings } = await import("@/lib/settings");
+      await flushPendingSettings();
+    }
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
       await getCurrentWindow().close();
@@ -105,9 +112,15 @@ export function WidgetPage({ kind }: Props) {
   const ss = remaining % 60;
 
   return (
-    <div className="flex h-screen flex-col bg-background/95 p-3 text-foreground backdrop-blur">
-      <div className="mb-1 flex items-center justify-between" data-tauri-drag-region>
-        <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+    <div className="flex h-screen flex-col border border-border-strong bg-surface-1 px-3 pb-3 text-text-1">
+      <div
+        className="-mx-3 mb-2 flex h-8 items-center justify-between border-b px-3"
+        data-tauri-drag-region
+      >
+        <span
+          data-tauri-drag-region
+          className="flex flex-1 items-center gap-1.5 text-caption font-semibold text-text-2"
+        >
           {kind === "sticky" && <StickyNote className="size-3.5 text-primary" />}
           {kind === "clock"
             ? t.widgetClock
@@ -124,41 +137,50 @@ export function WidgetPage({ kind }: Props) {
               <Button
                 size="icon"
                 variant="ghost"
-                className="size-6"
+                className="size-7"
                 onClick={() => void copySticky()}
-                title={t.copied}
+                title={t.copy}
+                aria-label={t.copy}
               >
                 <Copy className="size-3" />
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
-                className="size-6"
+                className="size-7"
                 onClick={() => void saveStickyAsNote()}
                 title={t.convertToNote}
+                aria-label={t.convertToNote}
               >
                 <FileText className="size-3" />
               </Button>
             </>
           )}
 
-          <Button size="icon" variant="ghost" className="size-6" onClick={() => void close()}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-7"
+            aria-label={t.close}
+            title={t.close}
+            onClick={() => void close()}
+          >
             <X className="size-3.5" />
           </Button>
         </div>
       </div>
 
       {kind === "clock" && (
-        <p className="font-mono text-3xl font-semibold tabular-nums tracking-tight">
+        <p className="text-display tabular">
           {pad2(Number(primary.hours))}:{pad2(Number(primary.minutes))}
-          <span className="text-xl text-muted-foreground">:{pad2(Number(primary.seconds))}</span>
+          <span className="text-section text-text-3">:{pad2(Number(primary.seconds))}</span>
         </p>
       )}
 
       {kind === "focus" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-1">
           <Timer className="size-5 text-primary" />
-          <p className="font-mono text-4xl font-semibold tabular-nums">
+          <p className="text-display tabular">
             {pad2(mm)}:{pad2(ss)}
           </p>
         </div>
@@ -167,10 +189,10 @@ export function WidgetPage({ kind }: Props) {
       {kind === "cpu" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-1">
           <Cpu className="size-5 text-primary" />
-          <p className="font-mono text-3xl font-semibold tabular-nums">
+          <p className="text-display tabular">
             {stats
               ? formatPercent(stats.global_cpu_usage, locale === "vi" ? "vi-VN" : "en-US")
-              : "…"}
+              : "—"}
           </p>
         </div>
       )}
@@ -181,7 +203,8 @@ export function WidgetPage({ kind }: Props) {
             value={scratchText}
             onChange={(e) => onScratchChange(e.target.value)}
             placeholder={t.stickyPlaceholder}
-            className="h-full resize-none border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 leading-relaxed font-mono"
+            aria-label={t.widgetSticky}
+            className="h-full min-h-0 resize-none border-0 bg-transparent p-1 text-body focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
           />
         </div>
       )}

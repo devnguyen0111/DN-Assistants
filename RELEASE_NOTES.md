@@ -1,3 +1,83 @@
+# DN Assistant 0.5.0 - Safer, Leaner, Smarter 🛡️
+
+## Tiếng Việt (Vietnamese)
+
+### 🆕 Tính năng mới
+1. **Hẹn giờ tắt máy** (trang Hệ thống): tắt máy, khởi động lại, ngủ, ngủ đông, khóa máy hoặc đăng xuất sau N phút hoặc vào giờ cố định. Cảnh báo trước 1 phút kèm nút Hủy; không ép đóng ứng dụng đang có dữ liệu chưa lưu.
+2. **Đổi tên hàng loạt trực tiếp**: chọn hoặc kéo thả file từ Explorer, bấm "Đổi tên" là xong — có **Hoàn tác**. Hỗ trợ hoán đổi tên và đổi chữ hoa/thường, không bao giờ ghi đè file khác. (Thay cho việc xuất script `.ps1`/`.bat`.)
+3. **Tự động sao lưu mã hóa** theo lịch vào thư mục tùy chọn (vd. OneDrive), giữ N bản mới nhất. Khôi phục có **màn xem trước** nội dung, tự chụp snapshot và hoàn tác nếu lỗi.
+4. **Nhắc việc cho Todo** (đúng giờ, trước 5/15/30/60 phút, trước 1 ngày) với nút **Xong** và **Hoãn 10 phút**.
+5. **Phím tắt khởi chạy nhanh** (`Ctrl+Alt+K`): mở Command Palette từ bất kỳ ứng dụng nào; tự ẩn lại nếu bạn không mở trang nào.
+6. **Ẩn/hiện module** trên sidebar trong Cài đặt.
+
+### 🎨 Giao diện mới
+- Thiết kế lại toàn bộ theo phong cách Windows gọn gàng: bề mặt đặc (bỏ kính mờ/gradient), chữ dễ đọc hơn, màu nhấn nhất quán ở cả giao diện sáng và tối.
+- Sidebar có phần Cài đặt · Giới thiệu · Thu gọn cố định ở đáy; thanh công cụ hiển thị đúng trạng thái hiện tại (giao diện, ngôn ngữ, luôn ở trên).
+- Trang **Hôm nay** ưu tiên lịch và việc đến hạn; thêm việc nhanh ngay tại trang chủ.
+- Bộ chọn ngày giờ kiểu Việt Nam (dd/mm/yyyy, tuần bắt đầu Thứ 2, giờ 24h); lịch có chế độ **Danh sách**.
+- Công cụ dev có danh sách công cụ dọc kèm ô lọc; Cài đặt có mục lục bên trái; Ghi chú hỏi trước khi bỏ thay đổi chưa lưu.
+- Command Palette tìm không cần dấu ("lich" → "Lịch").
+
+### ⬆️ Cập nhật ứng dụng tốt hơn
+- Tự kiểm tra bản mới mỗi 6 giờ (kể cả khi chạy nền ở khay hệ thống); "Nhắc lại ngày mai" thay vì hỏi liên tục.
+- Hộp thoại cập nhật mới: ghi chú phát hành định dạng đầy đủ, tiến độ tải có thể ẩn để làm việc tiếp (hiện trên thanh công cụ), lỗi được giải thích rõ kèm Thử lại.
+- Lưu toàn bộ cài đặt trước khi trình cài đặt khởi động lại ứng dụng.
+
+### 🔐 Bảo mật & dữ liệu
+- Mật khẩu/mã 2FA copy từ Vault **không còn bị lưu vào lịch sử clipboard** (của app lẫn Win+V/Cloud Clipboard) và **tự xóa sau 30 giây** (tùy chỉnh).
+- Lịch sử clipboard tôn trọng nội dung được các trình quản lý mật khẩu khác (KeePass, Bitwarden, 1Password…) đánh dấu "không ghi lại".
+- **Sửa lỗi nghiêm trọng**: khôi phục bản sao lưu không có vault sẽ xóa sạch vault hiện tại.
+- Bản sao lưu nay gồm cả thống kê Focus và clipboard đã ghim.
+- Thu hẹp quyền đọc file của giao diện chỉ còn thư mục ảnh clipboard.
+
+### 🧹 Gọn gàng hơn
+- **TikTok Streaks gộp vào Thói quen**: thói quen có giờ nhắc và cảnh báo "sắp mất chuỗi". Dữ liệu cũ được tự động chuyển (giữ nguyên chuỗi ngày).
+- **Tiền tệ chuyển thành tab trong Máy tính & Quy đổi**.
+- **Dev Tools hợp nhất**: Hash văn bản + checksum file, Tạo + quét QR, Thống kê văn bản + tiện ích mã nằm chung một chỗ. File Tools chỉ còn Đổi tên hàng loạt và Ảnh.
+- Sidebar sắp xếp lại: Hôm nay · Lưu trữ · Công cụ · Hệ thống · Ứng dụng.
+
+### 🐞 Sửa lỗi
+- Hộp thoại "Có gì mới" và trang Giới thiệu hiển thị sai phiên bản (0.3.2).
+- Widget nổi mất chế độ luôn nằm trên; sticky note không lưu được và không đóng được.
+- Các công cụ mạng (IP, ping, DNS, port) làm đơ cửa sổ tới vài giây.
+- Morning brief và `{{date}}` trong snippet lấy sai ngày trước 7h sáng (dùng giờ UTC).
+- Thay đổi ở widget (sticky note) nay đồng bộ ngay sang cửa sổ chính.
+
+## English
+
+### New
+- **Shutdown timer** (System page): shut down, restart, sleep, hibernate, lock or sign out after N minutes or at a set time, with a 1-minute cancelable warning.
+- **Native batch rename with undo** (replaces script export); safe swaps and case-only renames, never overwrites other files.
+- **Scheduled encrypted auto-backups** with retention; restore now previews contents and rolls back on failure.
+- **Todo reminders** with Done / Snooze 10 min.
+- **Quick-launcher hotkey** (`Ctrl+Alt+K`) for the command palette from anywhere.
+- **Show/hide sidebar modules** in Settings.
+
+### Redesigned interface
+- A calm Windows-style design: opaque surfaces, clearer type, consistent accents in light and dark.
+- Fixed sidebar footer (Settings · About · Collapse); the toolbar shows the current theme/language/pin state.
+- **Today** puts the agenda and due tasks first, with quick task creation.
+- Localized date/time picker (dd/mm/yyyy in Vietnamese, Monday-first weeks), calendar Agenda view, vertical Dev Tools list, Settings section navigation, unsaved-note protection, accent-insensitive command search.
+
+### Better app updates
+- Checks every 6 hours (also from the tray); "Remind me tomorrow" snooze.
+- New update dialog with formatted release notes, hideable download progress in the toolbar and clear, retryable errors.
+- Settings are saved before the installer restarts the app.
+
+### Security & data
+- Vault copies are excluded from clipboard history (ours and Windows) and auto-cleared after 30s.
+- Fixed: restoring a backup without a vault wiped the current vault.
+- Backups now include focus sessions and pinned clipboard items; asset scope narrowed.
+
+### Streamlined
+- TikTok Streaks merged into Habits (reminder + streak-at-risk times; data migrated automatically).
+- Currency is now a tab of Calc & Convert; Dev Tools absorbs file checksum, QR scanning and text stats.
+
+### Fixes
+- Wrong version in What's New/About, widgets losing always-on-top, sticky widget permissions, UI freezes from network tools, UTC date bugs, cross-window sync.
+
+---
+
 # DN Assistant 0.4.0 - The Pro Power Suite Update 🚀
 
 ## Tiếng Việt (Vietnamese)

@@ -1,8 +1,8 @@
 [package]
 name = "dn-assistant"
-version = "0.4.0"
+version = "0.5.0"
 description = "DN Assistant desktop utilities"
-authors = ["you"]
+authors = ["DevNguyen"]
 edition = "2021"
 
 [lib]
@@ -31,6 +31,14 @@ reqwest = { version = "0.12", default-features = false, features = ["blocking", 
 image = { version = "0.25", default-features = false, features = ["png"] }
 sha2 = "0.10"
 uuid = { version = "1", features = ["v4"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_System_DataExchange",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-window-state = "2"

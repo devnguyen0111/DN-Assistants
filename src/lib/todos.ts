@@ -1,4 +1,4 @@
-import Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb, newId } from "@/lib/db";
 
 export type TodoPriority = "low" | "medium" | "high";
 export type TodoRepeat = "none" | "daily" | "weekly";
@@ -12,6 +12,8 @@ export type Todo = {
   event_id: string | null;
   repeat: TodoRepeat;
   repeat_until: string | null;
+  /** Minutes before `due_at` to notify (0 = at due time), or null for no reminder. */
+  remind_minutes: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -23,24 +25,15 @@ export type TodoInput = {
   event_id?: string | null;
   repeat?: TodoRepeat;
   repeat_until?: string | null;
+  remind_minutes?: number | null;
 };
 
-const DB_URL = "sqlite:dn-assistant.db";
-let dbPromise: Promise<Database> | null = null;
+/** Reminder choices offered in the UI (minutes before due). */
+export const TODO_REMIND_OPTIONS = [0, 5, 15, 30, 60, 1440] as const;
 
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
-}
-
-function notifyChanged() {
-  window.dispatchEvent(new Event("dn-todos-changed"));
-}
-
-function newId() {
-  return crypto.randomUUID();
+function normalizeRemind(value: unknown): number | null {
+  const n = typeof value === "number" ? value : value == null ? NaN : Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
 }
 
 function normalizeRepeat(value: unknown): TodoRepeat {
@@ -53,6 +46,7 @@ function normalizeTodo(row: Todo): Todo {
     ...row,
     repeat: normalizeRepeat(row.repeat),
     repeat_until: row.repeat_until ?? null,
+    remind_minutes: normalizeRemind(row.remind_minutes),
   };
 }
 
@@ -76,12 +70,13 @@ export async function createTodo(input: TodoInput): Promise<Todo> {
     event_id: input.event_id ?? null,
     repeat: input.repeat ?? "none",
     repeat_until: input.repeat_until ?? null,
+    remind_minutes: normalizeRemind(input.remind_minutes),
     created_at: now,
     updated_at: now,
   };
   await db.execute(
-    `INSERT INTO todos (id, title, done, due_at, priority, event_id, repeat, repeat_until, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    `INSERT INTO todos (id, title, done, due_at, priority, event_id, repeat, repeat_until, remind_minutes, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       todo.id,
       todo.title,
@@ -91,11 +86,12 @@ export async function createTodo(input: TodoInput): Promise<Todo> {
       todo.event_id,
       todo.repeat,
       todo.repeat_until,
+      todo.remind_minutes,
       todo.created_at,
       todo.updated_at,
     ],
   );
-  notifyChanged();
+  emitChange("todos");
   return todo;
 }
 
@@ -113,11 +109,15 @@ export async function updateTodo(id: string, input: Partial<TodoInput>): Promise
     repeat: input.repeat !== undefined ? input.repeat : normalizeRepeat(existing.repeat),
     repeat_until:
       input.repeat_until !== undefined ? input.repeat_until : (existing.repeat_until ?? null),
+    remind_minutes:
+      input.remind_minutes !== undefined
+        ? normalizeRemind(input.remind_minutes)
+        : normalizeRemind(existing.remind_minutes),
   };
   await db.execute(
     `UPDATE todos SET title = $1, due_at = $2, priority = $3, event_id = $4,
-       repeat = $5, repeat_until = $6, updated_at = $7
-     WHERE id = $8`,
+       repeat = $5, repeat_until = $6, remind_minutes = $7, updated_at = $8
+     WHERE id = $9`,
     [
       next.title,
       next.due_at,
@@ -125,18 +125,19 @@ export async function updateTodo(id: string, input: Partial<TodoInput>): Promise
       next.event_id,
       next.repeat,
       next.repeat_until,
+      next.remind_minutes,
       now,
       id,
     ],
   );
-  notifyChanged();
+  emitChange("todos");
 }
 
 export async function upsertTodo(todo: Todo): Promise<void> {
   const db = await getDb();
   await db.execute(
-    `INSERT INTO todos (id, title, done, due_at, priority, event_id, repeat, repeat_until, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO todos (id, title, done, due_at, priority, event_id, repeat, repeat_until, remind_minutes, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      ON CONFLICT(id) DO UPDATE SET
        title = excluded.title,
        done = excluded.done,
@@ -145,6 +146,7 @@ export async function upsertTodo(todo: Todo): Promise<void> {
        event_id = excluded.event_id,
        repeat = excluded.repeat,
        repeat_until = excluded.repeat_until,
+       remind_minutes = excluded.remind_minutes,
        updated_at = excluded.updated_at`,
     [
       todo.id,
@@ -155,17 +157,18 @@ export async function upsertTodo(todo: Todo): Promise<void> {
       todo.event_id ?? null,
       normalizeRepeat(todo.repeat),
       todo.repeat_until ?? null,
+      normalizeRemind(todo.remind_minutes),
       todo.created_at,
       todo.updated_at,
     ],
   );
-  notifyChanged();
+  emitChange("todos");
 }
 
 export async function deleteTodo(id: string): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM todos WHERE id = $1", [id]);
-  notifyChanged();
+  emitChange("todos");
 }
 
 export async function toggleTodo(id: string, done: boolean): Promise<void> {
@@ -176,5 +179,5 @@ export async function toggleTodo(id: string, done: boolean): Promise<void> {
     now,
     id,
   ]);
-  notifyChanged();
+  emitChange("todos");
 }

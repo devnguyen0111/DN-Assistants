@@ -4,13 +4,12 @@ import {
   Play,
   RotateCcw,
   SkipForward,
-  Timer as TimerIcon,
-  Volume2,
+  Timer as Volume2,
   VolumeX,
   Waves,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
@@ -27,10 +26,7 @@ import {
   saveTimerState,
   type FocusKind,
 } from "@/lib/focus";
-import {
-  soundscapeEngine,
-  SOUNDSCAPE_TRACKS,
-} from "@/lib/soundscapes";
+import { soundscapeEngine, SOUNDSCAPE_TRACKS } from "@/lib/soundscapes";
 import { cn } from "@/lib/utils";
 
 const NEXT_KIND: Record<FocusKind, FocusKind> = {
@@ -191,10 +187,7 @@ export function FocusCard() {
   return (
     <Card className="h-full">
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          <TimerIcon className="size-4 text-primary" />
-          {t.focusTitle}
-        </CardTitle>
+        <h2 className="sr-only">{t.focusTitle}</h2>
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -270,7 +263,10 @@ export function FocusCard() {
               <Waves className="size-4 text-primary" />
               <span className="text-sm font-semibold tracking-tight">{t.soundscapes}</span>
               {soundscapeEngine.isAnyPlaying() && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-mono text-primary">
+                <Badge
+                  variant="secondary"
+                  className="h-5 px-1.5 text-[10px] font-mono text-primary"
+                >
                   Playing
                 </Badge>
               )}
@@ -332,7 +328,7 @@ export function FocusCard() {
                         "rounded-xl border p-2.5 transition-all",
                         playing
                           ? "border-primary/40 bg-primary/10 shadow-sm"
-                          : "bg-background/60 hover:bg-background",
+                          : "bg-surface-1 hover:bg-background",
                       )}
                     >
                       <button

@@ -1,4 +1,4 @@
-import Database from "@tauri-apps/plugin-sql";
+import { emitChange, getDb, newId } from "@/lib/db";
 
 export type Note = {
   id: string;
@@ -16,24 +16,6 @@ export type NoteInput = {
   tags?: string;
   pinned?: boolean;
 };
-
-const DB_URL = "sqlite:dn-assistant.db";
-let dbPromise: Promise<Database> | null = null;
-
-async function getDb() {
-  if (!dbPromise) {
-    dbPromise = Database.load(DB_URL);
-  }
-  return dbPromise;
-}
-
-function notifyChanged() {
-  window.dispatchEvent(new Event("dn-notes-changed"));
-}
-
-function newId() {
-  return crypto.randomUUID();
-}
 
 function normalize(row: Note): Note {
   return {
@@ -72,7 +54,7 @@ export async function createNote(input: NoteInput): Promise<Note> {
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [note.id, note.title, note.body, note.tags, note.pinned, note.created_at, note.updated_at],
   );
-  notifyChanged();
+  emitChange("notes");
   return note;
 }
 
@@ -91,13 +73,13 @@ export async function updateNote(id: string, input: NoteInput): Promise<void> {
       id,
     ],
   );
-  notifyChanged();
+  emitChange("notes");
 }
 
 export async function deleteNote(id: string): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM notes WHERE id = $1", [id]);
-  notifyChanged();
+  emitChange("notes");
 }
 
 export async function upsertNote(note: Note): Promise<void> {
@@ -121,7 +103,7 @@ export async function upsertNote(note: Note): Promise<void> {
       note.updated_at,
     ],
   );
-  notifyChanged();
+  emitChange("notes");
 }
 
 export async function searchNotes(query: string): Promise<Note[]> {

@@ -545,8 +545,12 @@ export function CurrencyCard() {
                             toast.success(`${q.unit} ${from}`);
                           }}
                         >
-                          <span className="text-muted-foreground">{q.unit} {from}</span>
-                          <span className="font-semibold">{formatConverted(q.forward, to, tag)} {to}</span>
+                          <span className="text-muted-foreground">
+                            {q.unit} {from}
+                          </span>
+                          <span className="font-semibold">
+                            {formatConverted(q.forward, to, tag)} {to}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -564,8 +568,12 @@ export function CurrencyCard() {
                             toast.success(`${q.unit} ${to}`);
                           }}
                         >
-                          <span className="text-muted-foreground">{q.unit} {to}</span>
-                          <span className="font-semibold">{formatConverted(q.backward, from, tag)} {from}</span>
+                          <span className="text-muted-foreground">
+                            {q.unit} {to}
+                          </span>
+                          <span className="font-semibold">
+                            {formatConverted(q.backward, from, tag)} {from}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -670,9 +678,7 @@ export function CurrencyCard() {
                 <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold">{t.currencyFeePercent}</p>
-                    <span className="font-mono text-xs font-bold text-primary">
-                      {feePercent}%
-                    </span>
+                    <span className="font-mono text-xs font-bold text-primary">{feePercent}%</span>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -718,19 +724,29 @@ export function CurrencyCard() {
                     <div className="mt-3 space-y-1.5 border-t pt-2 font-mono text-xs">
                       <div className="flex justify-between text-muted-foreground">
                         <span>{t.currencyAmount}:</span>
-                        <span>{formatConverted(feeCalculation.grossAmount, to, tag)} {to}</span>
+                        <span>
+                          {formatConverted(feeCalculation.grossAmount, to, tag)} {to}
+                        </span>
                       </div>
                       <div className="flex justify-between text-destructive">
-                        <span>{t.currencyFeeAmount} ({feeCalculation.feePercent}%):</span>
-                        <span>- {formatConverted(feeCalculation.feeAmount, to, tag)} {to}</span>
+                        <span>
+                          {t.currencyFeeAmount} ({feeCalculation.feePercent}%):
+                        </span>
+                        <span>
+                          - {formatConverted(feeCalculation.feeAmount, to, tag)} {to}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between rounded bg-primary/10 p-2 font-bold text-primary">
                         <span>{t.currencyNetAmount}:</span>
-                        <span className="text-sm">{formatConverted(feeCalculation.netAmount, to, tag)} {to}</span>
+                        <span className="text-sm">
+                          {formatConverted(feeCalculation.netAmount, to, tag)} {to}
+                        </span>
                       </div>
                       <div className="flex justify-between text-[11px] text-muted-foreground pt-1">
                         <span>{t.currencyEffectiveRate}:</span>
-                        <span>1 {from} = {formatRate(feeCalculation.effectiveRate, tag)} {to}</span>
+                        <span>
+                          1 {from} = {formatRate(feeCalculation.effectiveRate, tag)} {to}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -744,9 +760,7 @@ export function CurrencyCard() {
                 {fromCache ? t.currencyOffline : t.currencyUpdated}
               </Badge>
               {source && (
-                <span className="text-[11px] text-muted-foreground">
-                  {t.currencySource}
-                </span>
+                <span className="text-[11px] text-muted-foreground">{t.currencySource}</span>
               )}
             </div>
           </>

@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "widget-clock", "widget-focus", "widget-cpu"],
+  "windows": ["main", "widget-clock", "widget-focus", "widget-cpu", "widget-sticky"],
   "permissions": [
     "core:default",
     "opener:default",
@@ -26,6 +26,7 @@
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
     "core:window:allow-is-visible",
+    "core:window:allow-is-minimized",
     "core:window:allow-create",
     "core:window:allow-close",
     "core:window:allow-set-always-on-top",

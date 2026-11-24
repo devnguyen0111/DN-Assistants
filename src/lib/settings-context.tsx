@@ -13,10 +13,12 @@ import {
   loadSettings,
   loadSettingsSync,
   saveSettings,
+  startSettingsSync,
   subscribeSettings,
   type AppSettings,
 } from "@/lib/settings";
 import { setSoundMuted } from "@/lib/notify";
+import { startCrossWindowSync } from "@/lib/db";
 
 type SettingsContextValue = {
   settings: AppSettings;
@@ -55,6 +57,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => subscribeSettings(setSettings), []);
+
+  useEffect(() => {
+    void startSettingsSync();
+    void startCrossWindowSync();
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.accent = settings.accent;
